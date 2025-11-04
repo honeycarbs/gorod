@@ -1,0 +1,88 @@
+\documentclass[11pt]{article}
+\usepackage[margin=0.7in]{geometry}
+
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{indentfirst}
+
+% picture
+\usepackage{graphicx}
+\usepackage{float}
+
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+
+
+\renewcommand{\labelitemi}{--}
+
+\setlength{\headheight}{14pt}
+\addtolength{\topmargin}{-2pt}
+
+\title{Project ``Gorod''}
+\author{Tatiana Kazaeva \\\href{mailto:tkazaeva@pdx.edu}{tkazaeva@pdx.edu}}
+\date{\today}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Project ``Gorod''}
+\fancyhead[R]{\today}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt} 
+\renewcommand{\footrulewidth}{0.4pt} 
+
+\begin{document}
+
+\maketitle
+\thispagestyle{fancy}
+
+\section*{Sentimental background}
+
+This project idea is inspired by my deep love for the Sims franchise and city planning games. 
+It's also inspired by my love for a small European city in Lithuania, where I 
+spent most of my childhood.
+
+My dream for a long time was to play a city planning game as big as Cities Skylines, but 
+without industries, waste management, and traffic management, as I 
+hate driving and personal transport. This project might help me create 
+something like that myself.
+
+The name of the project (Gorod) comes from the Russian word город -- city.
+
+\section*{Topic area}
+
+This project aims to build a sandbox city building game. The main focus of the simulation is the city itself, which evolves over time with or without player input. The city displays statistics that change in real (or scaled in-game) time:
+\begin{itemize}
+    \item population -- total citizens and growth rate;
+    \item happiness -- overall citizen satisfaction;
+    \item zone demands -- visual indicators showing what the city needs (more housing, jobs, or social spaces);
+    \item \textit{possibly if decorating will be implemented}, greenery index -- walkability/pleasantness score based on parks and pathways;
+\end{itemize}
+
+Possible UI can be seen in Figure~\ref{fig:concept}. 
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.2\textwidth]{img/map.png}
+    \caption{Possible UI}
+    \label{fig:concept}
+\end{figure}
+
+Different color tiles represent different zones, and if a tile for some reason loses its zoning (a townie moves out, an entertainment space closes, or an industrial building loses all of its employees), it becomes grey again.
+The plan is that the simulation will be able to run with or without user input. 
+
+Statistics of the city are connected with each other --
+if one of the demands becomes too high, the population will decline, either because of no jobs, no entertainment, or no housing.
+
+\section*{Issues of concern}
+
+I want to take this project because game developement was on my mind for a very long time, but I was not sure where to start, and frankly, had no free time. Now, 
+this project for me might evolve into something I was aspiring to do for quite a while. 
+
+However, I would like to later link the Rust service that I will develop in the span of this course to 
+Godot to make tiles more stylish -- isometric PoV, pixel art, 
+and all that cool kids (and me) like. I am not sure if I will be 
+able to accomplish this task, but I will figure that out during the course. 
+If nothing works, at least I will have a hopefully efficient algorithm.
+
+\end{document}
