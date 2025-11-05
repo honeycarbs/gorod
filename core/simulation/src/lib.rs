@@ -2,9 +2,12 @@
 //!
 //! This library provides the core simulation logic.
 
-mod city;
-mod time;
+pub mod components;
+pub mod ecs;
+pub mod resources;
+pub mod systems;
 
-// Re-export public types
-pub use city::City;
-pub use time::GameTime;
+pub use components::*;
+pub use ecs::*;
+pub use resources::*;
+pub use systems::*;
