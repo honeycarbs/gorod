@@ -77,14 +77,13 @@ pub fn highlight_hovered_tile(
             tile_size,
             map_type,
             anchor,
-        ) {
-            if let Some(tile_entity) = tile_storage.get(&tile_pos) {
+        )
+            && let Some(tile_entity) = tile_storage.get(&tile_pos) {
                 commands.entity(tile_entity).insert(HighlightedTile);
                 if let Ok(mut color) = tile_color_q.get_mut(tile_entity) {
                     color.0 = Color::srgba(1.0, 1.0, 0.8, 1.0); // Light yellow highlight
                 }
             }
-        }
     }
 }
 
