@@ -19,11 +19,12 @@ impl Default for CameraController {
     }
 }
 
+#[allow(dead_code)]
 pub struct CameraControllerPlugin;
 
 impl Plugin for CameraControllerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, (camera_movement, camera_zoom));
+        app.add_systems(Update, (camera_movement, camera_zoom, reset_camera));
     }
 }
 
@@ -55,36 +56,29 @@ fn camera_movement(
     }
 }
 
-/// System to handle camera zoom with +/- keys
 fn camera_zoom(
     time: Res<Time>,
     keyboard: Res<ButtonInput<KeyCode>>,
-    mut camera_q: Query<&mut Projection, With<CameraController>>,
+    mut camera_q: Query<(&mut Projection, &CameraController)>,
 ) {
-    for mut projection in camera_q.iter_mut() {
+    for (mut projection, controller) in camera_q.iter_mut() {
         let mut zoom_delta = 0.0;
 
-        // Plus/Equals key to zoom in
         if keyboard.pressed(KeyCode::Equal) || keyboard.pressed(KeyCode::NumpadAdd) {
             zoom_delta -= 1.0;
         }
-        // Minus key to zoom out
         if keyboard.pressed(KeyCode::Minus) || keyboard.pressed(KeyCode::NumpadSubtract) {
             zoom_delta += 1.0;
         }
 
-        if zoom_delta != 0.0 {
-            // Match on the projection enum to access OrthographicProjection
-            if let Projection::Orthographic(ortho) = projection.as_mut() {
-                let zoom_change = zoom_delta * time.delta_secs();
-                ortho.scale = (ortho.scale + zoom_change).clamp(0.1, 5.0);
-            }
+        if zoom_delta != 0.0 && let Projection::Orthographic(ortho) = projection.as_mut() {
+            let zoom_change = zoom_delta * controller.zoom_speed * time.delta_secs();
+            ortho.scale = (ortho.scale + zoom_change).clamp(controller.min_zoom, controller.max_zoom);
         }
     }
 }
 
-/// System to reset camera to default position and zoom
-pub fn reset_camera(
+fn reset_camera(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut camera_q: Query<(&mut Transform, &mut Projection), With<CameraController>>,
 ) {
@@ -92,7 +86,6 @@ pub fn reset_camera(
         for (mut transform, mut projection) in camera_q.iter_mut() {
             transform.translation = Vec3::ZERO;
 
-            // Reset projection scale
             if let Projection::Orthographic(ortho) = projection.as_mut() {
                 ortho.scale = 1.0;
             }
