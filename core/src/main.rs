@@ -54,6 +54,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         texture: TilemapTexture::Single(texture_handle),
         tile_size,
         transform: Transform::from_xyz(0.0, 0.0, 0.0),
+        anchor: TilemapAnchor::Center,
         ..Default::default()
     });
 }
