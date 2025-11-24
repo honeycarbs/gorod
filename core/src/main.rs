@@ -8,7 +8,6 @@ fn main() {
         .add_plugins(TilemapPlugin)
         .add_plugins(camera::CameraControllerPlugin)
         .add_plugins(map::TilePlacementPlugin)
-        .add_systems(Update, map::change_tile_type,)
         .add_systems(Startup, setup)
         .run();
 }
