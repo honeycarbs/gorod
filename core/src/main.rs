@@ -8,7 +8,7 @@ fn main() {
         .add_plugins(TilemapPlugin)
         .add_plugins(camera::CameraControllerPlugin)
         .add_plugins(map::TilePlacementPlugin)
-        .add_systems(Update, map::change_tile_type)
+        .add_systems(Update, map::change_tile_type,)
         .add_systems(Startup, setup)
         .run();
 }
@@ -57,4 +57,19 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         anchor: TilemapAnchor::Center,
         ..Default::default()
     });
+
+    let mut placeable_map = map::PlaceableMap::default();
+    let center_x = map_size.x / 2;
+    let center_y = map_size.y / 2;
+
+    for dx in -1..=1 {
+        for dy in -1..=1 {
+            let x = (center_x as i32 + dx) as u32;
+            let y = (center_y as i32 + dy) as u32;
+            let tile_pos = TilePos { x, y };
+            placeable_map.mark_placeable(tile_pos);
+        }
+    }
+
+    commands.insert_resource(placeable_map);
 }
