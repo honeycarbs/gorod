@@ -82,7 +82,7 @@ fn reset_camera(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut camera_q: Query<(&mut Transform, &mut Projection), With<CameraController>>,
 ) {
-    if keyboard.just_pressed(KeyCode::KeyR) {
+    if keyboard.just_pressed(KeyCode::Home) {
         for (mut transform, mut projection) in camera_q.iter_mut() {
             transform.translation = Vec3::ZERO;
 

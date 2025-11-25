@@ -59,16 +59,16 @@ pub fn change_tile_type(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut current_tile_type: ResMut<CurrentTileType>,
 ) {
-    if keyboard.just_pressed(KeyCode::Digit1) {
+    if keyboard.just_pressed(KeyCode::KeyR) {
         current_tile_type.texture_index = 2;
-        info!("Selected: Housing");
-    } else if keyboard.just_pressed(KeyCode::Digit2) {
+        info!("Selected: Residential/Housing");
+    } else if keyboard.just_pressed(KeyCode::KeyC) {
         current_tile_type.texture_index = 3;
         info!("Selected: Commercial");
-    } else if keyboard.just_pressed(KeyCode::Digit3) {
+    } else if keyboard.just_pressed(KeyCode::KeyI) {
         current_tile_type.texture_index = 4;
         info!("Selected: Industry");
-    } else if keyboard.just_pressed(KeyCode::Digit4) {
+    } else if keyboard.just_pressed(KeyCode::KeyO) {
         current_tile_type.texture_index = 5;
         info!("Selected: Road");
     }

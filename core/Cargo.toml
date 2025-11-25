@@ -7,6 +7,7 @@ edition = "2024"
 bevy = "0.17.3"
 bevy_ecs_tilemap = "0.17.0"
 bevy_fast_tilemap = "0.8.1"
+time = "0.3.44"
 
 # Enable max optimizations for dependencies, but not for our code:
 [profile.dev.package."*"]
