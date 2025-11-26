@@ -1,33 +1,29 @@
 use super::helpers::*;
 use super::resources::*;
+use super::events::*;
 use crate::budget::{Budget, BuildingPlaced, BuildingType, TransactionFailed};
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 
-pub fn place_tile_on_click(
+pub fn collect_placement_intents(
     mouse_button: Res<ButtonInput<MouseButton>>,
     cursor_pos: Res<CursorWorldPos>,
     current_tile_type: Res<CurrentTileType>,
-    placeable_map: Res<PlaceableMap>,
-    mut budget: ResMut<Budget>,
-    mut building_events: MessageWriter<BuildingPlaced>,
-    mut failed_events: MessageWriter<TransactionFailed>,
     tilemap_q: Query<(
         &TilemapSize,
         &TilemapGridSize,
         &TilemapTileSize,
         &TilemapType,
-        &TileStorage,
         &Transform,
         &TilemapAnchor,
     )>,
-    mut tile_texture_q: Query<&mut TileTextureIndex>,
+    mut intent_writer: MessageWriter<PlacementIntent>,
 ) {
     if !mouse_button.just_pressed(MouseButton::Left) {
         return;
     }
 
-    for (map_size, grid_size, tile_size, map_type, tile_storage, map_transform, anchor) in
+    for (map_size, grid_size, tile_size, map_type, map_transform, anchor) in
         tilemap_q.iter()
     {
         let cursor_in_map_pos = cursor_to_map_pos(cursor_pos.0, map_transform);
@@ -39,46 +35,79 @@ pub fn place_tile_on_click(
             tile_size,
             map_type,
             anchor,
-        ) && let Some(existing_tile_entity) = tile_storage.get(&tile_pos)
-            && let Ok(mut texture_index) = tile_texture_q.get_mut(existing_tile_entity)
-        {
-            if !placeable_map.is_placeable(&tile_pos) {
+        ) {
+            if let Some(building_type) =
+                BuildingType::from_texture_index(current_tile_type.texture_index)
+            {
+                intent_writer.write(PlacementIntent {
+                    tile_pos,
+                    building_type,
+                });
+            }
+        }
+    }
+}
+
+pub fn execute_placement_intents(
+    placeable_map: Res<PlaceableMap>,
+    mut budget: ResMut<Budget>,
+    mut building_events: MessageWriter<BuildingPlaced>,
+    mut failed_events: MessageWriter<TransactionFailed>,
+    mut intent_reader: MessageReader<PlacementIntent>,
+    mut tile_q: Query<(&TilePos, &mut TileTextureIndex)>,
+) {
+    for intent in intent_reader.read() {
+        let desired_pos = intent.tile_pos;
+
+        for (tile_pos, mut texture_index) in tile_q.iter_mut() {
+            if *tile_pos != desired_pos {
+                continue;
+            }
+
+            if !placeable_map.is_placeable(tile_pos) {
                 warn!("Cannot place here - tile not placeable!");
-                return;
+                failed_events.write(TransactionFailed);
+                break;
             }
 
             if texture_index.0 != 1 {
                 warn!("Cannot place here - tile already occupied!");
-                return;
+                failed_events.write(TransactionFailed);
+                break;
             }
 
-            if let Some(building_type) =
-                BuildingType::from_texture_index(current_tile_type.texture_index)
-            {
-                let cost = building_type.cost();
+            let cost = intent.building_type.cost();
 
-                if !budget.can_afford(cost) {
-                    warn!(
-                        "Cannot afford {}! Cost: ${}, Balance: ${}",
-                        format!("{:?}", building_type),
-                        cost,
-                        budget.money
-                    );
-                    failed_events.write(TransactionFailed);
-                    return;
-                }
-
-                budget.spend(cost);
-
-                texture_index.0 = current_tile_type.texture_index;
-
-                info!(
-                    "Built {:?} for ${}. Balance: ${}",
-                    building_type, cost, budget.money
+            if !budget.can_afford(cost) {
+                warn!(
+                    "Cannot afford {:?}! Cost: ${}, Balance: ${}",
+                    intent.building_type,
+                    cost,
+                    budget.money
                 );
-
-                building_events.write(BuildingPlaced);
+                failed_events.write(TransactionFailed);
+                break;
             }
+
+            budget.spend(cost);
+
+            let new_texture_index = match intent.building_type {
+                BuildingType::Residential => 2,
+                BuildingType::Commercial => 3,
+                BuildingType::Industry => 4,
+                BuildingType::Road => 5,
+            };
+
+            texture_index.0 = new_texture_index;
+
+            info!(
+                "Built {:?} for ${}. Balance: ${}",
+                intent.building_type, cost, budget.money
+            );
+
+            building_events.write(BuildingPlaced);
+
+            break;
         }
     }
 }

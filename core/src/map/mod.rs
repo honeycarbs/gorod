@@ -6,6 +6,7 @@ mod highlighting;
 mod placeable_area;
 mod placement;
 mod resources;
+mod events;
 
 pub use resources::*;
 
@@ -16,13 +17,15 @@ impl Plugin for TilePlacementPlugin {
         app.init_resource::<CursorWorldPos>()
             .init_resource::<CurrentTileType>()
             .init_resource::<PlaceableMap>()
+            .add_message::<events::PlacementIntent>()
             .add_systems(First, resources::update_cursor_world_pos)
             .add_systems(
                 Update,
                 (
                     placement::change_tile_type,
                     highlighting::highlight_hovered_tile,
-                    placement::place_tile_on_click,
+                    placement::collect_placement_intents,
+                    placement::execute_placement_intents,
                     demolition::demolish_tile_on_click,
                     placeable_area::expand_placeable_area,
                     placeable_area::update_placeable_indicators,
