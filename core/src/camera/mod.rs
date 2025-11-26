@@ -71,9 +71,12 @@ fn camera_zoom(
             zoom_delta += 1.0;
         }
 
-        if zoom_delta != 0.0 && let Projection::Orthographic(ortho) = projection.as_mut() {
+        if zoom_delta != 0.0
+            && let Projection::Orthographic(ortho) = projection.as_mut()
+        {
             let zoom_change = zoom_delta * controller.zoom_speed * time.delta_secs();
-            ortho.scale = (ortho.scale + zoom_change).clamp(controller.min_zoom, controller.max_zoom);
+            ortho.scale =
+                (ortho.scale + zoom_change).clamp(controller.min_zoom, controller.max_zoom);
         }
     }
 }

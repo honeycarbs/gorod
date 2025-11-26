@@ -1,5 +1,5 @@
-use bevy::prelude::*;
 use super::resources::{GameClock, GameTime, TimeSpeed};
+use bevy::prelude::*;
 
 #[derive(Component)]
 pub struct TimeDisplayText;

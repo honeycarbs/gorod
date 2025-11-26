@@ -1,7 +1,7 @@
+use super::helpers::*;
+use super::resources::*;
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
-use super::resources::*;
-use super::helpers::*;
 
 pub fn expand_placeable_area(
     mut placeable_map: ResMut<PlaceableMap>,
@@ -9,8 +9,12 @@ pub fn expand_placeable_area(
     tile_texture_q: Query<&TileTextureIndex>,
     tilemap_size_q: Query<&TilemapSize>,
 ) {
-    let Some(tile_storage) = tile_storage_q.iter().next() else { return };
-    let Some(map_size) = tilemap_size_q.iter().next() else { return };
+    let Some(tile_storage) = tile_storage_q.iter().next() else {
+        return;
+    };
+    let Some(map_size) = tilemap_size_q.iter().next() else {
+        return;
+    };
 
     let mut newly_placeable = Vec::new();
 
@@ -31,12 +35,10 @@ pub fn expand_placeable_area(
                         let nx = x as i32 + dx;
                         let ny = y as i32 + dy;
 
-                        if nx >= 0 && nx < map_size.x as i32
-                            && ny >= 0 && ny < map_size.y as i32
-                        {
+                        if nx >= 0 && nx < map_size.x as i32 && ny >= 0 && ny < map_size.y as i32 {
                             let neighbor_pos = TilePos {
                                 x: nx as u32,
-                                y: ny as u32
+                                y: ny as u32,
                             };
 
                             if !placeable_map.is_placeable(&neighbor_pos) {
@@ -64,8 +66,12 @@ pub fn update_placeable_indicators(
         return;
     }
 
-    let Some(tile_storage) = tile_storage_q.iter().next() else { return };
-    let Some(map_size) = tilemap_size_q.iter().next() else { return };
+    let Some(tile_storage) = tile_storage_q.iter().next() else {
+        return;
+    };
+    let Some(map_size) = tilemap_size_q.iter().next() else {
+        return;
+    };
 
     for x in 0..map_size.x {
         for y in 0..map_size.y {
@@ -103,7 +109,10 @@ pub fn incremental_update_placeable_area(
             let ny = demolished_pos.y as i32 + dy;
 
             if nx >= 0 && nx < map_size.x as i32 && ny >= 0 && ny < map_size.y as i32 {
-                let check_pos = TilePos { x: nx as u32, y: ny as u32 };
+                let check_pos = TilePos {
+                    x: nx as u32,
+                    y: ny as u32,
+                };
 
                 if let Some(entity) = tile_storage.get(&check_pos)
                     && let Ok(texture) = tile_texture_q.get(entity)
@@ -129,5 +138,8 @@ pub fn incremental_update_placeable_area(
         }
     }
 
-    info!("Incrementally updated placeable area around {:?}", demolished_pos);
+    info!(
+        "Incrementally updated placeable area around {:?}",
+        demolished_pos
+    );
 }

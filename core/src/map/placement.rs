@@ -1,13 +1,17 @@
+use super::helpers::*;
+use super::resources::*;
+use crate::budget::{Budget, BuildingPlaced, BuildingType, TransactionFailed};
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
-use super::resources::*;
-use super::helpers::*;
 
 pub fn place_tile_on_click(
     mouse_button: Res<ButtonInput<MouseButton>>,
     cursor_pos: Res<CursorWorldPos>,
     current_tile_type: Res<CurrentTileType>,
     placeable_map: Res<PlaceableMap>,
+    mut budget: ResMut<Budget>,
+    mut building_events: MessageWriter<BuildingPlaced>,
+    mut failed_events: MessageWriter<TransactionFailed>,
     tilemap_q: Query<(
         &TilemapSize,
         &TilemapGridSize,
@@ -35,8 +39,7 @@ pub fn place_tile_on_click(
             tile_size,
             map_type,
             anchor,
-        )
-            && let Some(existing_tile_entity) = tile_storage.get(&tile_pos)
+        ) && let Some(existing_tile_entity) = tile_storage.get(&tile_pos)
             && let Ok(mut texture_index) = tile_texture_q.get_mut(existing_tile_entity)
         {
             if !placeable_map.is_placeable(&tile_pos) {
@@ -49,8 +52,33 @@ pub fn place_tile_on_click(
                 return;
             }
 
-            texture_index.0 = current_tile_type.texture_index;
-            info!("Set tile at {:?} to texture index {}", tile_pos, current_tile_type.texture_index);
+            if let Some(building_type) =
+                BuildingType::from_texture_index(current_tile_type.texture_index)
+            {
+                let cost = building_type.cost();
+
+                if !budget.can_afford(cost) {
+                    warn!(
+                        "Cannot afford {}! Cost: ${}, Balance: ${}",
+                        format!("{:?}", building_type),
+                        cost,
+                        budget.money
+                    );
+                    failed_events.write(TransactionFailed);
+                    return;
+                }
+
+                budget.spend(cost);
+
+                texture_index.0 = current_tile_type.texture_index;
+
+                info!(
+                    "Built {:?} for ${}. Balance: ${}",
+                    building_type, cost, budget.money
+                );
+
+                building_events.write(BuildingPlaced);
+            }
         }
     }
 }

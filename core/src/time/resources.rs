@@ -18,7 +18,7 @@ pub struct GameTime {
 #[derive(Resource, Default)]
 pub struct GameClock {
     pub day: u32,
-    pub hour: u8,    // 0-23
-    pub minute: u8,  // 0-59
-    pub second: u8,  // 0-59
+    pub hour: u8,   // 0-23
+    pub minute: u8, // 0-59
+    pub second: u8, // 0-59
 }

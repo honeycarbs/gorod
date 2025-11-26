@@ -1,19 +1,18 @@
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
-mod map;
+mod budget;
 mod camera;
+mod map;
 mod time;
+
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(TilemapPlugin)
-
         .add_plugins(time::GameTimePlugin)
-
+        .add_plugins(budget::BudgetPlugin)
         .add_plugins(camera::CameraControllerPlugin)
-        
         .add_plugins(map::TilePlacementPlugin)
-        
         .add_systems(Startup, setup)
         .run();
 }

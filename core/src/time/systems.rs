@@ -3,10 +3,7 @@ use bevy::prelude::*;
 use super::resources::*;
 
 // Update game time based on speed mode
-pub fn update_game_time(
-    time: Res<Time>,
-    mut game_time: ResMut<GameTime>,
-) {
+pub fn update_game_time(time: Res<Time>, mut game_time: ResMut<GameTime>) {
     let multiplier = match game_time.speed {
         TimeSpeed::Paused => 0.0,
         TimeSpeed::Normal => 60.0,
@@ -17,10 +14,7 @@ pub fn update_game_time(
     game_time.elapsed_seconds += time.delta_secs_f64() * multiplier;
 }
 
-pub fn update_game_clock(
-    game_time: Res<GameTime>,
-    mut clock: ResMut<GameClock>,
-) {
+pub fn update_game_clock(game_time: Res<GameTime>, mut clock: ResMut<GameClock>) {
     let total_seconds = game_time.elapsed_seconds as u64;
     clock.second = (total_seconds % 60) as u8;
     clock.minute = ((total_seconds / 60) % 60) as u8;

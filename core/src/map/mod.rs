@@ -1,11 +1,11 @@
 use bevy::prelude::*;
 
-mod resources;
-mod placement;
 mod demolition;
-mod placeable_area;
-mod highlighting;
 mod helpers;
+mod highlighting;
+mod placeable_area;
+mod placement;
+mod resources;
 
 pub use resources::*;
 
@@ -17,13 +17,17 @@ impl Plugin for TilePlacementPlugin {
             .init_resource::<CurrentTileType>()
             .init_resource::<PlaceableMap>()
             .add_systems(First, resources::update_cursor_world_pos)
-            .add_systems(Update, (
-                placement::change_tile_type,
-                highlighting::highlight_hovered_tile,
-                placement::place_tile_on_click,
-                demolition::demolish_tile_on_click,
-                placeable_area::expand_placeable_area,
-                placeable_area::update_placeable_indicators,
-            ).chain());
+            .add_systems(
+                Update,
+                (
+                    placement::change_tile_type,
+                    highlighting::highlight_hovered_tile,
+                    placement::place_tile_on_click,
+                    demolition::demolish_tile_on_click,
+                    placeable_area::expand_placeable_area,
+                    placeable_area::update_placeable_indicators,
+                )
+                    .chain(),
+            );
     }
 }

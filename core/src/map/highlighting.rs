@@ -1,7 +1,7 @@
+use super::helpers::*;
+use super::resources::*;
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
-use super::resources::*;
-use super::helpers::*;
 
 pub fn highlight_hovered_tile(
     mut commands: Commands,
@@ -37,8 +37,8 @@ pub fn highlight_hovered_tile(
             tile_size,
             map_type,
             anchor,
-        )
-            && let Some(tile_entity) = tile_storage.get(&tile_pos) {
+        ) && let Some(tile_entity) = tile_storage.get(&tile_pos)
+        {
             commands.entity(tile_entity).insert(HighlightedTile);
             if let Ok(mut color) = tile_color_q.get_mut(tile_entity) {
                 color.0 = Color::srgba(1.0, 1.0, 0.8, 1.0);

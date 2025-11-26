@@ -1,8 +1,8 @@
-use bevy::prelude::*;
-use bevy_ecs_tilemap::prelude::*;
-use super::resources::*;
 use super::helpers::*;
 use super::placeable_area::incremental_update_placeable_area;
+use super::resources::*;
+use bevy::prelude::*;
+use bevy_ecs_tilemap::prelude::*;
 
 pub fn demolish_tile_on_click(
     mouse_button: Res<ButtonInput<MouseButton>>,
@@ -40,8 +40,7 @@ pub fn demolish_tile_on_click(
             tile_size,
             map_type,
             anchor,
-        )
-            && let Some(tile_entity) = tile_storage.get(&tile_pos)
+        ) && let Some(tile_entity) = tile_storage.get(&tile_pos)
         {
             let current_texture = if let Ok(texture) = tile_texture_q.get(tile_entity) {
                 texture.0
