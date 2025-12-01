@@ -1,9 +1,9 @@
 use super::helpers::*;
 use super::placeable_area::incremental_update_placeable_area;
 use super::resources::*;
+use crate::budget::{BuildingDemolished, BuildingType};
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
-use crate::budget::{BuildingDemolished, BuildingType};
 
 pub fn demolish_tile_on_click(
     mouse_button: Res<ButtonInput<MouseButton>>,
@@ -73,10 +73,11 @@ pub fn demolish_tile_on_click(
                         placeable_map.placeable_tiles.remove(&tile_pos);
                     }
 
-                    if let Some(building_type) =
-                        BuildingType::from_texture_index(current_texture)
-                    {
-                        demolished_writer.write(BuildingDemolished { building_type });
+                    if let Some(building_type) = BuildingType::from_texture_index(current_texture) {
+                        demolished_writer.write(BuildingDemolished {
+                            building_type,
+                            tile_pos,
+                        });
                     }
 
                     info!("Demolished tile at {:?}", tile_pos);

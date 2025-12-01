@@ -3,7 +3,7 @@ mod display;
 mod resources;
 mod systems;
 
-pub use resources::{GameClock};
+pub use resources::GameClock;
 
 pub struct GameTimePlugin;
 

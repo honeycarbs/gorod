@@ -4,7 +4,7 @@ use crate::budget::{Budget, BuildingDemolished, BuildingPlaced};
 use crate::time::GameClock;
 
 use super::display::{setup_city_stats_display, update_city_stats_display};
-use super::resources::{building_contribution, CityStats};
+use super::resources::{CityStats, apply_demolition_happiness, building_contribution, apply_placement_happiness};
 
 pub struct SimulationPlugin;
 
@@ -14,11 +14,19 @@ impl Plugin for SimulationPlugin {
             .add_systems(Startup, setup_city_stats_display)
             .add_systems(Update, handle_building_events)
             .add_systems(Update, (update_population, update_demands_and_happiness))
+            .add_systems(
+                Update,
+                apply_placement_happiness.after(update_demands_and_happiness),
+            )
+            .add_systems(
+                Update,
+                apply_demolition_happiness.after(apply_placement_happiness),
+            )
             .add_systems(Update, (update_income_on_day_tick, update_city_stats_display));
     }
 }
 
-/// Reacts to `BuildingPlaced` / `BuildingDemolished` to keep city capacities in sync
+/// reacts to `BuildingPlaced` / `BuildingDemolished` to keep city capacities in sync
 pub fn handle_building_events(
     mut stats: ResMut<CityStats>,
     mut placed_reader: MessageReader<BuildingPlaced>,
@@ -38,7 +46,7 @@ pub fn handle_building_events(
         stats.entertainment_capacity -= contrib.entertainment;
     }
 
-    // Clamp to avoid negative capacities.
+    // clamp to avoid negative capacities.
     stats.housing_capacity = stats.housing_capacity.max(0);
     stats.job_capacity = stats.job_capacity.max(0);
     stats.entertainment_capacity = stats.entertainment_capacity.max(0);
@@ -46,7 +54,6 @@ pub fn handle_building_events(
 
 /// Adjust population based primarily on housing capacity once per in‑game day.
 ///
-/// Intuition:
 /// - Housing drives how many people can potentially live in the city.
 /// - If there are not enough jobs/entertainment for that many people,
 ///   demands will become positive and happiness will drop.
@@ -60,7 +67,7 @@ pub fn update_population(
     }
     *last_processed_day = clock.day;
 
-    // Drive population towards available housing, independent of jobs.
+    // drive population towards available housing, independent of jobs
     let target = stats.housing_capacity.max(0);
     let diff = target - stats.population;
 
@@ -75,7 +82,7 @@ pub fn update_population(
     stats.population = stats.population.max(0);
 }
 
-/// Recompute demand and happiness from `CityStats`
+/// recompute demand and happiness from `CityStats`
 pub fn update_demands_and_happiness(mut stats: ResMut<CityStats>) {
     let pop = stats.population.max(0);
 
@@ -100,14 +107,13 @@ pub fn update_demands_and_happiness(mut stats: ResMut<CityStats>) {
         0.0
     };
 
-    let pressure =
-        0.5 * housing_pressure + 0.3 * job_pressure + 0.2 * entertainment_pressure;
+    let pressure = 0.5 * housing_pressure + 0.3 * job_pressure + 0.2 * entertainment_pressure;
 
     let happiness = (1.0 - pressure).clamp(0.0, 1.0);
     stats.happiness = happiness;
 }
 
-/// Derive periodic income/upkeep and modify `Budget` once per in‑game day.
+/// derive periodic income/upkeep and modify `Budget` once per in‑game day
 pub fn update_income_on_day_tick(
     clock: Res<GameClock>,
     stats: Res<CityStats>,
@@ -125,11 +131,9 @@ pub fn update_income_on_day_tick(
     let income_from_population = pop * 5;
     let income_from_jobs = jobs * 2;
 
-    let total_capacity =
-        stats.housing_capacity + stats.job_capacity + stats.entertainment_capacity;
+    let total_capacity = stats.housing_capacity + stats.job_capacity + stats.entertainment_capacity;
     let upkeep = (total_capacity / 10).max(0);
 
     let net = income_from_population + income_from_jobs - upkeep;
     budget.money += net;
 }
-

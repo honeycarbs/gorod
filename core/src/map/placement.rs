@@ -1,9 +1,9 @@
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 
+use super::events::*;
 use super::helpers::*;
 use super::resources::*;
-use super::events::*;
 use crate::budget::{Budget, BuildingPlaced, BuildingType, TransactionFailed};
 
 pub fn collect_placement_intents(
@@ -24,9 +24,7 @@ pub fn collect_placement_intents(
         return;
     }
 
-    for (map_size, grid_size, tile_size, map_type, map_transform, anchor) in
-        tilemap_q.iter()
-    {
+    for (map_size, grid_size, tile_size, map_type, map_transform, anchor) in tilemap_q.iter() {
         let cursor_in_map_pos = cursor_to_map_pos(cursor_pos.0, map_transform);
 
         if let Some(tile_pos) = TilePos::from_world_pos(
@@ -36,8 +34,7 @@ pub fn collect_placement_intents(
             tile_size,
             map_type,
             anchor,
-        )
-            && let Some(building_type) =
+        ) && let Some(building_type) =
             BuildingType::from_texture_index(current_tile_type.texture_index)
         {
             intent_writer.write(PlacementIntent {
@@ -81,9 +78,7 @@ pub fn execute_placement_intents(
             if !current_budget.can_afford(cost) {
                 warn!(
                     "Cannot afford {:?}! Cost: ${}, Balance: ${}",
-                    intent.building_type,
-                    cost,
-                    current_budget.money
+                    intent.building_type, cost, current_budget.money
                 );
                 failed_events.write(TransactionFailed);
                 break;
@@ -107,6 +102,7 @@ pub fn execute_placement_intents(
 
             building_events.write(BuildingPlaced {
                 building_type: intent.building_type,
+                tile_pos: *tile_pos,
             });
 
             break;

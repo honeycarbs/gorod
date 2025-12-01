@@ -39,11 +39,6 @@ pub fn update_city_stats_display(
 
     text.0 = format!(
         "Pop: {} | Housing: {} | Jobs: {} | Happy: {:.2}",
-        stats.population,
-        stats.housing_capacity,
-        stats.job_capacity,
-        stats.happiness,
+        stats.population, stats.housing_capacity, stats.job_capacity, stats.happiness,
     );
 }
-
-

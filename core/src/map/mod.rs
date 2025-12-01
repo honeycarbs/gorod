@@ -1,12 +1,12 @@
 use bevy::prelude::*;
 
 mod demolition;
+mod events;
 mod helpers;
 mod highlighting;
 mod placeable_area;
 mod placement;
 mod resources;
-mod events;
 
 pub use resources::*;
 

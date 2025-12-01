@@ -7,9 +7,7 @@ pub struct Budget {
 
 impl Default for Budget {
     fn default() -> Self {
-        Self {
-            money: 50000,
-        }
+        Self { money: 50000 }
     }
 }
 
