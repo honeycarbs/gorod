@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 mod budget;
 mod camera;
+mod city;
 mod map;
 mod time;
 
@@ -13,6 +14,7 @@ fn main() {
         .add_plugins(budget::BudgetPlugin)
         .add_plugins(camera::CameraControllerPlugin)
         .add_plugins(map::TilePlacementPlugin)
+        .add_plugins(city::SimulationPlugin)
         .add_systems(Startup, setup)
         .run();
 }

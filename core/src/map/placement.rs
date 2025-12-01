@@ -1,9 +1,10 @@
+use bevy::prelude::*;
+use bevy_ecs_tilemap::prelude::*;
+
 use super::helpers::*;
 use super::resources::*;
 use super::events::*;
 use crate::budget::{Budget, BuildingPlaced, BuildingType, TransactionFailed};
-use bevy::prelude::*;
-use bevy_ecs_tilemap::prelude::*;
 
 pub fn collect_placement_intents(
     mouse_button: Res<ButtonInput<MouseButton>>,
@@ -35,22 +36,21 @@ pub fn collect_placement_intents(
             tile_size,
             map_type,
             anchor,
-        ) {
-            if let Some(building_type) =
-                BuildingType::from_texture_index(current_tile_type.texture_index)
-            {
-                intent_writer.write(PlacementIntent {
-                    tile_pos,
-                    building_type,
-                });
-            }
+        )
+            && let Some(building_type) =
+            BuildingType::from_texture_index(current_tile_type.texture_index)
+        {
+            intent_writer.write(PlacementIntent {
+                tile_pos,
+                building_type,
+            });
         }
     }
 }
 
 pub fn execute_placement_intents(
     placeable_map: Res<PlaceableMap>,
-    mut budget: ResMut<Budget>,
+    mut current_budget: ResMut<Budget>,
     mut building_events: MessageWriter<BuildingPlaced>,
     mut failed_events: MessageWriter<TransactionFailed>,
     mut intent_reader: MessageReader<PlacementIntent>,
@@ -78,18 +78,18 @@ pub fn execute_placement_intents(
 
             let cost = intent.building_type.cost();
 
-            if !budget.can_afford(cost) {
+            if !current_budget.can_afford(cost) {
                 warn!(
                     "Cannot afford {:?}! Cost: ${}, Balance: ${}",
                     intent.building_type,
                     cost,
-                    budget.money
+                    current_budget.money
                 );
                 failed_events.write(TransactionFailed);
                 break;
             }
 
-            budget.spend(cost);
+            current_budget.spend(cost);
 
             let new_texture_index = match intent.building_type {
                 BuildingType::Residential => 2,
@@ -102,10 +102,12 @@ pub fn execute_placement_intents(
 
             info!(
                 "Built {:?} for ${}. Balance: ${}",
-                intent.building_type, cost, budget.money
+                intent.building_type, cost, current_budget.money
             );
 
-            building_events.write(BuildingPlaced);
+            building_events.write(BuildingPlaced {
+                building_type: intent.building_type,
+            });
 
             break;
         }
