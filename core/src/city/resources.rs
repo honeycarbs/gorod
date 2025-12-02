@@ -7,9 +7,26 @@ const RESIDENTIAL_NEIGHBOR_RADIUS: i32 = 3;
 const ROAD_NEIGHBOR_RADIUS: i32 = 4;
 
 #[derive(Resource, Debug)]
-pub struct CityStats {
+pub struct CityPopulation {
+    /// Total number of citizens currently living in the city.
     pub population: i64,
+    /// from 0.0 as "everyone is sad" to 1.0 as "everyone is happy"
+    pub happiness: f32,
+}
 
+impl Default for CityPopulation {
+    fn default() -> Self {
+        Self {
+            population: 0,
+            happiness: 1.0,
+        }
+    }
+}
+
+/// Describes how much housing, jobs and entertainment the city provides,
+/// and how much of each is currently demanded by the population.
+#[derive(Resource, Debug)]
+pub struct CityServices {
     pub housing_capacity: i64,
     pub job_capacity: i64,
     pub entertainment_capacity: i64,
@@ -17,22 +34,42 @@ pub struct CityStats {
     pub housing_demand: i64,
     pub job_demand: i64,
     pub entertainment_demand: i64,
-
-    // from 0.0 as "everyone is sad" to 1.0 as "everyone is happy"
-    pub happiness: f32,
 }
 
-impl Default for CityStats {
+impl Default for CityServices {
     fn default() -> Self {
         Self {
-            population: 0,
             housing_capacity: 0,
             job_capacity: 0,
             entertainment_capacity: 0,
             housing_demand: 0,
             job_demand: 0,
             entertainment_demand: 0,
-            happiness: 1.0,
+        }
+    }
+}
+
+/// Tracks coarse infrastructure statistics that drive upkeep and income.
+#[derive(Resource, Debug)]
+pub struct CityInfrastructure {
+    pub residential_count: i64,
+    pub commercial_count: i64,
+    pub industry_count: i64,
+    pub road_count: i64,
+
+    pub industry_job_capacity: i64,
+    pub commercial_job_capacity: i64,
+}
+
+impl Default for CityInfrastructure {
+    fn default() -> Self {
+        Self {
+            residential_count: 0,
+            commercial_count: 0,
+            industry_count: 0,
+            road_count: 0,
+            industry_job_capacity: 0,
+            commercial_job_capacity: 0,
         }
     }
 }
@@ -108,7 +145,8 @@ fn count_nearby_residential(
 }
 
 pub fn apply_demolition_happiness(
-    mut stats: ResMut<CityStats>,
+    mut population: ResMut<CityPopulation>,
+    services: Res<CityServices>,
     mut demolished_reader: MessageReader<BuildingDemolished>,
     tile_storage_q: Query<(&TileStorage, &TilemapSize)>,
     tile_texture_q: Query<&TileTextureIndex>,
@@ -136,8 +174,8 @@ pub fn apply_demolition_happiness(
                 let contrib = building_contribution(event.building_type);
                 let jobs_lost = contrib.jobs as f32;
 
-                let pop = stats.population.max(1) as f32;
-                let job_pressure = stats.job_demand.max(0) as f32 / pop;
+                let pop = population.population.max(1) as f32;
+                let job_pressure = services.job_demand.max(0) as f32 / pop;
 
                 let negative = -0.03 * job_pressure * (jobs_lost / 10.0);
 
@@ -148,7 +186,7 @@ pub fn apply_demolition_happiness(
 
         delta = delta.clamp(-0.05, 0.05);
         if delta != 0.0 {
-            stats.happiness = (stats.happiness + delta).clamp(0.0, 1.0);
+            population.happiness = (population.happiness + delta).clamp(0.0, 1.0);
         }
     }
 }
@@ -195,7 +233,8 @@ fn is_accessible(
 }
 
 pub fn apply_placement_happiness(
-    mut stats: ResMut<CityStats>,
+    mut population: ResMut<CityPopulation>,
+    services: Res<CityServices>,
     mut placed_reader: MessageReader<BuildingPlaced>,
     tile_storage_q: Query<(&TileStorage, &TilemapSize)>,
     tile_texture_q: Query<&TileTextureIndex>,
@@ -214,11 +253,11 @@ pub fn apply_placement_happiness(
         let nearby_residential =
             count_nearby_residential(&event.tile_pos, tile_storage, &tile_texture_q, map_size);
 
-        let pop = stats.population.max(1) as f32;
+        let pop = population.population.max(1) as f32;
         let housing_need =
-            (stats.housing_demand.max(0) as f32 / pop).clamp(0.0, 1.0);
+            (services.housing_demand.max(0) as f32 / pop).clamp(0.0, 1.0);
         let job_need =
-            (stats.job_demand.max(0) as f32 / pop).clamp(0.0, 1.0);
+            (services.job_demand.max(0) as f32 / pop).clamp(0.0, 1.0);
 
         let mut delta = match event.building_type {
             BuildingType::Residential => {
@@ -246,7 +285,7 @@ pub fn apply_placement_happiness(
 
         delta = delta.clamp(-0.05, 0.05);
         if delta != 0.0 {
-            stats.happiness = (stats.happiness + delta).clamp(0.0, 1.0);
+            population.happiness = (population.happiness + delta).clamp(0.0, 1.0);
         }
     }
 }

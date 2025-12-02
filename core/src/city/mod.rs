@@ -1,5 +1,5 @@
 mod display;
-mod resources;
+pub mod resources;
 mod systems;
 
 pub use systems::SimulationPlugin;

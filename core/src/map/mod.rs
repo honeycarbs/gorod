@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 mod demolition;
+mod display;
 mod events;
 mod helpers;
 mod highlighting;
@@ -18,6 +19,7 @@ impl Plugin for TilePlacementPlugin {
             .init_resource::<CurrentTileType>()
             .init_resource::<PlaceableMap>()
             .add_message::<events::PlacementIntent>()
+            .add_systems(Startup, display::setup_selected_tile_display)
             .add_systems(First, resources::update_cursor_world_pos)
             .add_systems(
                 Update,
@@ -31,6 +33,8 @@ impl Plugin for TilePlacementPlugin {
                     placeable_area::update_placeable_indicators,
                 )
                     .chain(),
-            );
+            )
+            .add_systems(Update, display::update_selected_tile_display);
     }
 }
+

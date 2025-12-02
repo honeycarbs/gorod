@@ -17,6 +17,7 @@ impl Plugin for BudgetPlugin {
             .add_message::<BuildingDemolished>()
             .add_message::<TransactionFailed>()
             .add_systems(Startup, display::setup_budget_display)
-            .add_systems(Update, display::update_budget_display);
+            .add_systems(Update, display::update_budget_display)
+            .add_systems(Update, spending::update_income_on_day_tick);
     }
 }

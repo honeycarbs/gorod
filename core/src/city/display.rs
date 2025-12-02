@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::resources::CityStats;
+use super::resources::{CityPopulation, CityServices};
 
 #[derive(Component)]
 pub struct CityStatsDisplayText;
@@ -26,10 +26,11 @@ pub fn setup_city_stats_display(mut commands: Commands) {
 }
 
 pub fn update_city_stats_display(
-    stats: Res<CityStats>,
+    population: Res<CityPopulation>,
+    services: Res<CityServices>,
     mut query: Query<&mut Text, With<CityStatsDisplayText>>,
 ) {
-    if !stats.is_changed() {
+    if !population.is_changed() && !services.is_changed() {
         return;
     }
 
@@ -39,6 +40,9 @@ pub fn update_city_stats_display(
 
     text.0 = format!(
         "Pop: {} | Housing: {} | Jobs: {} | Happy: {:.2}",
-        stats.population, stats.housing_capacity, stats.job_capacity, stats.happiness,
+        population.population,
+        services.housing_capacity,
+        services.job_capacity,
+        population.happiness,
     );
 }
