@@ -2,43 +2,54 @@ use super::helpers::*;
 use super::placeable_area::incremental_update_placeable_area;
 use super::resources::*;
 use crate::budget::{BuildingDemolished, BuildingType};
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 
+#[derive(SystemParam)]
+pub struct DemolitionInputs<'w, 's> {
+    mouse_button: Res<'w, ButtonInput<MouseButton>>,
+    keyboard: Res<'w, ButtonInput<KeyCode>>,
+    cursor_pos: Res<'w, CursorWorldPos>,
+    ui_click_blocker: Res<'w, UiClickBlocker>,
+    tilemap_q: Query<
+        'w,
+        's,
+        (
+            &'static TilemapSize,
+            &'static TilemapGridSize,
+            &'static TilemapTileSize,
+            &'static TilemapType,
+            &'static TileStorage,
+            &'static Transform,
+            &'static TilemapAnchor,
+        ),
+    >,
+    tile_texture_q: Query<'w, 's, &'static mut TileTextureIndex>,
+}
+
 pub fn demolish_tile_on_click(
-    mouse_button: Res<ButtonInput<MouseButton>>,
-    keyboard: Res<ButtonInput<KeyCode>>,
-    cursor_pos: Res<CursorWorldPos>,
-    ui_click_blocker: Res<UiClickBlocker>,
+    mut inputs: DemolitionInputs,
     mut placeable_map: ResMut<PlaceableMap>,
-    tilemap_q: Query<(
-        &TilemapSize,
-        &TilemapGridSize,
-        &TilemapTileSize,
-        &TilemapType,
-        &TileStorage,
-        &Transform,
-        &TilemapAnchor,
-    )>,
-    mut tile_texture_q: Query<&mut TileTextureIndex>,
     mut demolished_writer: MessageWriter<BuildingDemolished>,
 ) {
-    if !mouse_button.just_pressed(MouseButton::Left) {
+    if !inputs.mouse_button.just_pressed(MouseButton::Left) {
         return;
     }
 
-    if ui_click_blocker.just_clicked_ui {
+    if inputs.ui_click_blocker.just_clicked_ui {
         return;
     }
 
-    if !keyboard.pressed(KeyCode::ShiftLeft) && !keyboard.pressed(KeyCode::ShiftRight) {
+    if !inputs.keyboard.pressed(KeyCode::ShiftLeft) && !inputs.keyboard.pressed(KeyCode::ShiftRight)
+    {
         return;
     }
 
     for (map_size, grid_size, tile_size, map_type, tile_storage, map_transform, anchor) in
-        tilemap_q.iter()
+        inputs.tilemap_q.iter()
     {
-        let cursor_in_map_pos = cursor_to_map_pos(cursor_pos.0, map_transform);
+        let cursor_in_map_pos = cursor_to_map_pos(inputs.cursor_pos.0, map_transform);
 
         if let Some(tile_pos) = TilePos::from_world_pos(
             &cursor_in_map_pos,
@@ -49,28 +60,25 @@ pub fn demolish_tile_on_click(
             anchor,
         ) && let Some(tile_entity) = tile_storage.get(&tile_pos)
         {
-            let current_texture = if let Ok(texture) = tile_texture_q.get(tile_entity) {
+            let current_texture = if let Ok(texture) = inputs.tile_texture_q.get(tile_entity) {
                 texture.0
             } else {
                 return;
             };
 
             if current_texture >= 2 {
-                let placed_tile_count = count_placed_tiles(tile_storage, &tile_texture_q, map_size);
+                let placed_tile_count =
+                    count_placed_tiles(tile_storage, &inputs.tile_texture_q, map_size);
 
                 if placed_tile_count <= 1 {
                     warn!("Cannot demolish the last tile!");
                     return;
                 }
 
-                let should_be_placeable = is_within_range_of_placed_tile(
-                    &tile_pos,
-                    tile_storage,
-                    &tile_texture_q,
-                    map_size,
-                );
+                let should_be_placeable =
+                    is_within_range_of_placed_tile(&tile_pos, tile_storage, &inputs.tile_texture_q, map_size);
 
-                if let Ok(mut texture_index) = tile_texture_q.get_mut(tile_entity) {
+                if let Ok(mut texture_index) = inputs.tile_texture_q.get_mut(tile_entity) {
                     if should_be_placeable {
                         texture_index.0 = 1;
                     } else {
@@ -91,7 +99,7 @@ pub fn demolish_tile_on_click(
                         tile_pos,
                         &mut placeable_map,
                         tile_storage,
-                        &tile_texture_q,
+                        &inputs.tile_texture_q,
                         map_size,
                     );
                 }

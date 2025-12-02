@@ -3,6 +3,13 @@ use bevy::prelude::*;
 use super::resources::{CurrentTileType, UiClickBlocker};
 use crate::budget::BuildingType;
 
+type TileSelectInteractionQuery<'w, 's> = Query<
+    'w,
+    's,
+    (&'static Interaction, &'static TileSelectButton),
+    (Changed<Interaction>, With<Button>),
+>;
+
 #[derive(Component)]
 pub struct SelectedTileDisplayText;
 
@@ -122,10 +129,7 @@ pub fn update_selected_tile_display(
 }
 
 pub fn handle_tile_select_button_presses(
-    mut interaction_q: Query<
-        (&Interaction, &TileSelectButton),
-        (Changed<Interaction>, With<Button>),
-    >,
+    mut interaction_q: TileSelectInteractionQuery<'_, '_>,
     mut current_tile_type: ResMut<CurrentTileType>,
     mut ui_click_blocker: ResMut<UiClickBlocker>,
 ) {

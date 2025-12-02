@@ -6,7 +6,7 @@ use crate::time::GameClock;
 use super::resources::Budget;
 
 // income per productive worker per day
-const WORKER_TAX_PER_DAY: i64 = 3;
+const WORKER_TAX_PER_DAY: i64 = 4;
 
 // corporate income per productive worker share
 const INDUSTRY_PROFIT_PER_WORKER: f32 = 1.5;
@@ -15,8 +15,8 @@ const COMMERCIAL_PROFIT_PER_WORKER: f32 = 1.0;
 // upkeep per building per day
 const ROAD_UPKEEP_PER_TILE: i64 = 1;
 const RES_UPKEEP_PER_BUILDING: i64 = 0;
-const COM_UPKEEP_PER_BUILDING: i64 = 4;
-const IND_UPKEEP_PER_BUILDING: i64 = 6;
+const COM_UPKEEP_PER_BUILDING: i64 = 3;
+const IND_UPKEEP_PER_BUILDING: i64 = 5;
 
 const NEGATIVE_BALANCE_PENALTY_DAYS: u32 = 3;
 const NEGATIVE_BALANCE_HAPPINESS_PENALTY: f32 = 0.01;
@@ -80,8 +80,13 @@ pub fn update_income_on_day_tick(
     }
 
     if *negative_streak >= NEGATIVE_BALANCE_PENALTY_DAYS {
+        let old = population.happiness;
         population.happiness =
             (population.happiness - NEGATIVE_BALANCE_HAPPINESS_PENALTY).clamp(0.0, 1.0);
+        info!(
+            "Happiness decreased from {:.3} to {:.3} due to running a budget deficit for {} days",
+            old, population.happiness, *negative_streak
+        );
     }
 
     if budget.money > HEALTHY_RESERVE_THRESHOLD
@@ -89,7 +94,12 @@ pub fn update_income_on_day_tick(
         && services.job_demand == 0
         && services.entertainment_demand == 0
     {
+        let old = population.happiness;
         population.happiness =
             (population.happiness + HEALTHY_RESERVE_HAPPINESS_BONUS).clamp(0.0, 1.0);
+        info!(
+            "Happiness increased from {:.3} to {:.3} due to healthy budget reserves",
+            old, population.happiness
+        );
     }
 }

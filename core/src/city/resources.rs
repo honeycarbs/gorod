@@ -25,7 +25,7 @@ impl Default for CityPopulation {
 
 /// Describes how much housing, jobs and entertainment the city provides,
 /// and how much of each is currently demanded by the population.
-#[derive(Resource, Debug)]
+#[derive(Resource, Debug, Default)]
 pub struct CityServices {
     pub housing_capacity: i64,
     pub job_capacity: i64,
@@ -36,21 +36,8 @@ pub struct CityServices {
     pub entertainment_demand: i64,
 }
 
-impl Default for CityServices {
-    fn default() -> Self {
-        Self {
-            housing_capacity: 0,
-            job_capacity: 0,
-            entertainment_capacity: 0,
-            housing_demand: 0,
-            job_demand: 0,
-            entertainment_demand: 0,
-        }
-    }
-}
-
 /// Tracks coarse infrastructure statistics that drive upkeep and income.
-#[derive(Resource, Debug)]
+#[derive(Resource, Debug, Default)]
 pub struct CityInfrastructure {
     pub residential_count: i64,
     pub commercial_count: i64,
@@ -59,19 +46,6 @@ pub struct CityInfrastructure {
 
     pub industry_job_capacity: i64,
     pub commercial_job_capacity: i64,
-}
-
-impl Default for CityInfrastructure {
-    fn default() -> Self {
-        Self {
-            residential_count: 0,
-            commercial_count: 0,
-            industry_count: 0,
-            road_count: 0,
-            industry_job_capacity: 0,
-            commercial_job_capacity: 0,
-        }
-    }
 }
 
 pub struct BuildingContribution {
@@ -89,13 +63,13 @@ pub fn building_contribution(building_type: BuildingType) -> BuildingContributio
         },
         BuildingType::Commercial => BuildingContribution {
             housing: 0,
-            jobs: 8,
-            entertainment: 5,
+            jobs: 5,
+            entertainment: 15,
         },
         BuildingType::Industry => BuildingContribution {
             housing: 0,
             jobs: 15,
-            entertainment: 0,
+            entertainment: 3,
         },
         BuildingType::Road => BuildingContribution {
             housing: 0,
@@ -182,6 +156,15 @@ pub fn apply_demolition_happiness(
 
         delta = delta.clamp(-0.05, 0.05);
         if delta != 0.0 {
+            if delta < 0.0 {
+                info!(
+                    "Happiness decreased by {:.3} due to demolition of {:?} at {:?} (nearby_residential={})",
+                    delta,
+                    event.building_type,
+                    event.tile_pos,
+                    nearby_residential
+                );
+            }
             population.happiness = (population.happiness + delta).clamp(0.0, 1.0);
         }
     }
@@ -279,6 +262,15 @@ pub fn apply_placement_happiness(
 
         delta = delta.clamp(-0.05, 0.05);
         if delta != 0.0 {
+            if delta < 0.0 {
+                info!(
+                    "Happiness decreased by {:.3} due to placement of {:?} at {:?} (nearby_residential={})",
+                    delta,
+                    event.building_type,
+                    event.tile_pos,
+                    nearby_residential
+                );
+            }
             population.happiness = (population.happiness + delta).clamp(0.0, 1.0);
         }
     }

@@ -134,7 +134,15 @@ pub fn update_population(
     }
     *last_processed_day = clock.day;
 
-    let max_population = services.housing_capacity.min(services.job_capacity).max(0);
+    let housing_cap = services.housing_capacity.max(0);
+    let job_cap = services.job_capacity.max(0);
+
+    // If there are no jobs at all, people gradually leave the city.
+    let max_population = if job_cap == 0 {
+        0
+    } else {
+        housing_cap.min(job_cap)
+    };
 
     let diff = max_population - population.population;
 
@@ -142,13 +150,19 @@ pub fn update_population(
         return;
     }
 
-    let mut step = ((diff as f32) * 0.10).round() as i64;
+    // Move population faster toward the target (about 40% of the gap per day).
+    let mut step = ((diff as f32) * 0.40).round() as i64;
     if step == 0 {
         step = diff.signum();
     }
 
+    let old_pop = population.population;
     population.population += step;
     population.population = population.population.max(0);
+    info!(
+        "Population changed from {} to {} (target {}, housing_capacity {}, job_capacity {})",
+        old_pop, population.population, max_population, services.housing_capacity, services.job_capacity
+    );
 }
 
 pub fn update_demands(mut services: ResMut<CityServices>, population: Res<CityPopulation>) {
@@ -164,6 +178,7 @@ pub fn update_happiness_from_demands(
     mut population: ResMut<CityPopulation>,
 ) {
     let pop = population.population.max(0);
+    let old_happiness = population.happiness;
 
     let pop_f = pop as f32;
     let housing_pressure = if pop > 0 {
@@ -176,16 +191,24 @@ pub fn update_happiness_from_demands(
     } else {
         0.0
     };
-    let entertainment_pressure = if pop > 0 {
+    let entertainment_shortfall = if pop > 0 {
         services.entertainment_demand as f32 / pop_f
     } else {
         0.0
     };
+    let entertainment_pressure = (entertainment_shortfall - 0.15).max(0.0);
 
-    let pressure = 0.5 * housing_pressure + 0.3 * job_pressure + 0.2 * entertainment_pressure;
+    let pressure = 0.50 * housing_pressure + 0.35 * job_pressure + 0.15 * entertainment_pressure;
 
     let happiness = (1.0 - pressure).clamp(0.0, 1.0);
     population.happiness = happiness;
+
+    if happiness + 1e-4 < old_happiness {
+        info!(
+            "Happiness decreased from {:.3} to {:.3} due to service pressures: housing={:.3}, jobs={:.3}, entertainment={:.3}",
+            old_happiness, happiness, housing_pressure, job_pressure, entertainment_pressure
+        );
+    }
 }
 
 /// Periodically abandon buildings based on happiness and service pressures.
@@ -198,9 +221,9 @@ pub fn apply_abandonment(
     mut demolished_writer: MessageWriter<BuildingDemolished>,
     mut last_abandonment_day: Local<u32>,
 ) {
-    const ABANDONMENT_INTERVAL_DAYS: u32 = 3;
-    const HAPPINESS_ABANDON_THRESHOLD: f32 = 0.3;
-    const DEMAND_PRESSURE_THRESHOLD: f32 = 0.4;
+    const ABANDONMENT_INTERVAL_DAYS: u32 = 7;
+    // If people are reasonably happy, skip abandonment
+    const MIN_HAPPINESS_FOR_ABANDON: f32 = 0.5;
 
     if clock.day < *last_abandonment_day + ABANDONMENT_INTERVAL_DAYS {
         return;
@@ -217,68 +240,37 @@ pub fn apply_abandonment(
     if pop == 0 {
         return;
     }
+    if population.happiness >= MIN_HAPPINESS_FOR_ABANDON {
+        return;
+    }
+
+    let housing_shortage = services.housing_demand > 0;
+
+    let job_cap = services.job_capacity.max(0);
+    let jobs_f = job_cap as f32;
     let pop_f = pop as f32;
+    let employed = pop_f.min(jobs_f);
+    // Unhappy workers effectively "quit", reducing staffing.
+    let effective_workers = employed * population.happiness.clamp(0.0, 1.0);
+    let staffing_ratio = if jobs_f > 0.0 {
+        effective_workers / jobs_f
+    } else {
+        1.0
+    };
+    let job_understaffed = job_cap > 0 && staffing_ratio < 0.6;
 
-    let housing_pressure = (services.housing_demand.max(0) as f32) / pop_f;
-    let job_pressure = (services.job_demand.max(0) as f32) / pop_f;
-    let entertainment_pressure = (services.entertainment_demand.max(0) as f32) / pop_f;
-
-    let max_pressure = housing_pressure
-        .max(job_pressure)
-        .max(entertainment_pressure);
-
-    if population.happiness >= HAPPINESS_ABANDON_THRESHOLD
-        && max_pressure < DEMAND_PRESSURE_THRESHOLD
-    {
+    if !housing_shortage && !job_understaffed {
         return;
     }
 
-    enum PressureKind {
-        Housing,
-        Jobs,
-        Entertainment,
-    }
+    info!(
+        "Abandonment tick: pop={}, happiness={:.2}, housing_demand={}, job_capacity={}, effective_workers={:.1}, staffing_ratio={:.2}",
+        pop, population.happiness, services.housing_demand, job_cap, effective_workers, staffing_ratio
+    );
 
-    let (primary_pressure, primary_kind) =
-        if housing_pressure >= job_pressure && housing_pressure >= entertainment_pressure {
-            (housing_pressure, PressureKind::Housing)
-        } else if job_pressure >= entertainment_pressure {
-            (job_pressure, PressureKind::Jobs)
-        } else {
-            (entertainment_pressure, PressureKind::Entertainment)
-        };
+    let residential_to_abandon: usize = if housing_shortage { 1 } else { 0 };
+    let job_capacity_to_remove: i64 = if job_understaffed { 1 } else { 0 };
 
-    let severity = primary_pressure
-        .max(1.0 - population.happiness)
-        .clamp(0.1, 1.0);
-
-    let mut residential_to_abandon: usize = 0;
-    if matches!(primary_kind, PressureKind::Housing) {
-        let approx = (severity * 3.0).ceil() as usize;
-        residential_to_abandon = approx.max(1);
-    }
-
-    let mut job_capacity_to_remove: i64 = 0;
-
-    if matches!(
-        primary_kind,
-        PressureKind::Jobs | PressureKind::Entertainment
-    ) {
-        let base = ((services.job_demand.max(0) as f32) * 0.5).round() as i64;
-        job_capacity_to_remove = job_capacity_to_remove.max(base);
-    }
-
-    let excess_jobs = services.job_capacity - pop;
-    if excess_jobs > 0 {
-        let extra = ((excess_jobs as f32) * 0.25).round() as i64;
-        job_capacity_to_remove = job_capacity_to_remove.max(extra);
-    }
-
-    if residential_to_abandon == 0 && job_capacity_to_remove <= 0 {
-        return;
-    }
-
-    // abandon residential buildings first
     if residential_to_abandon > 0 {
         let mut remaining = residential_to_abandon;
 
