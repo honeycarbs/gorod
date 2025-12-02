@@ -18,9 +18,22 @@ impl Plugin for TilePlacementPlugin {
         app.init_resource::<CursorWorldPos>()
             .init_resource::<CurrentTileType>()
             .init_resource::<PlaceableMap>()
+            .init_resource::<UiClickBlocker>()
             .add_message::<events::PlacementIntent>()
-            .add_systems(Startup, display::setup_selected_tile_display)
-            .add_systems(First, resources::update_cursor_world_pos)
+            .add_systems(
+                Startup,
+                (
+                    display::setup_selected_tile_display,
+                    display::setup_tile_select_buttons,
+                ),
+            )
+            .add_systems(
+                First,
+                (
+                    resources::update_cursor_world_pos,
+                    resources::reset_ui_click_blocker,
+                ),
+            )
             .add_systems(
                 Update,
                 (
@@ -34,7 +47,13 @@ impl Plugin for TilePlacementPlugin {
                 )
                     .chain(),
             )
-            .add_systems(Update, display::update_selected_tile_display);
+            .add_systems(
+                Update,
+                (
+                    display::update_selected_tile_display,
+                    display::handle_tile_select_button_presses,
+                    display::update_tile_select_button_colors,
+                ),
+            );
     }
 }
-

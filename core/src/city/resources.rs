@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::{TilePos, TileStorage, TileTextureIndex, TilemapSize};
 
-use crate::budget::{BuildingPlaced, BuildingDemolished, BuildingType};
+use crate::budget::{BuildingDemolished, BuildingPlaced, BuildingType};
 
 const RESIDENTIAL_NEIGHBOR_RADIUS: i32 = 3;
 const ROAD_NEIGHBOR_RADIUS: i32 = 4;
@@ -162,12 +162,8 @@ pub fn apply_demolition_happiness(
             count_nearby_residential(&event.tile_pos, tile_storage, &tile_texture_q, map_size);
 
         let mut delta = match event.building_type {
-            BuildingType::Residential => {
-                -0.03
-            }
-            BuildingType::Commercial => {
-                -0.02 * nearby_residential as f32
-            }
+            BuildingType::Residential => -0.03,
+            BuildingType::Commercial => -0.02 * nearby_residential as f32,
             BuildingType::Industry => {
                 let positive = 0.005 * nearby_residential as f32;
 
@@ -254,10 +250,8 @@ pub fn apply_placement_happiness(
             count_nearby_residential(&event.tile_pos, tile_storage, &tile_texture_q, map_size);
 
         let pop = population.population.max(1) as f32;
-        let housing_need =
-            (services.housing_demand.max(0) as f32 / pop).clamp(0.0, 1.0);
-        let job_need =
-            (services.job_demand.max(0) as f32 / pop).clamp(0.0, 1.0);
+        let housing_need = (services.housing_demand.max(0) as f32 / pop).clamp(0.0, 1.0);
+        let job_need = (services.job_demand.max(0) as f32 / pop).clamp(0.0, 1.0);
 
         let mut delta = match event.building_type {
             BuildingType::Residential => {

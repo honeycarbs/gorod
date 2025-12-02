@@ -9,6 +9,7 @@ pub fn demolish_tile_on_click(
     mouse_button: Res<ButtonInput<MouseButton>>,
     keyboard: Res<ButtonInput<KeyCode>>,
     cursor_pos: Res<CursorWorldPos>,
+    ui_click_blocker: Res<UiClickBlocker>,
     mut placeable_map: ResMut<PlaceableMap>,
     tilemap_q: Query<(
         &TilemapSize,
@@ -23,6 +24,10 @@ pub fn demolish_tile_on_click(
     mut demolished_writer: MessageWriter<BuildingDemolished>,
 ) {
     if !mouse_button.just_pressed(MouseButton::Left) {
+        return;
+    }
+
+    if ui_click_blocker.just_clicked_ui {
         return;
     }
 

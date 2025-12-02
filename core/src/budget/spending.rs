@@ -80,8 +80,8 @@ pub fn update_income_on_day_tick(
     }
 
     if *negative_streak >= NEGATIVE_BALANCE_PENALTY_DAYS {
-        population.happiness = (population.happiness - NEGATIVE_BALANCE_HAPPINESS_PENALTY)
-            .clamp(0.0, 1.0);
+        population.happiness =
+            (population.happiness - NEGATIVE_BALANCE_HAPPINESS_PENALTY).clamp(0.0, 1.0);
     }
 
     if budget.money > HEALTHY_RESERVE_THRESHOLD
@@ -89,8 +89,7 @@ pub fn update_income_on_day_tick(
         && services.job_demand == 0
         && services.entertainment_demand == 0
     {
-        population.happiness = (population.happiness + HEALTHY_RESERVE_HAPPINESS_BONUS)
-            .clamp(0.0, 1.0);
+        population.happiness =
+            (population.happiness + HEALTHY_RESERVE_HAPPINESS_BONUS).clamp(0.0, 1.0);
     }
 }
-

@@ -2,11 +2,19 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 use std::collections::HashSet;
 
+/// Texture index for the abandoned (grey) tile in `tiles.png`.
+pub const ABANDONED_TEXTURE_INDEX: u32 = 6;
+
 #[derive(Resource, Default)]
 pub struct CursorWorldPos(pub Vec2);
 
 #[derive(Component)]
 pub struct HighlightedTile;
+
+#[derive(Resource, Default)]
+pub struct UiClickBlocker {
+    pub just_clicked_ui: bool,
+}
 
 #[derive(Resource)]
 pub struct CurrentTileType {
@@ -48,4 +56,8 @@ pub fn update_cursor_world_pos(
             }
         }
     }
+}
+
+pub fn reset_ui_click_blocker(mut blocker: ResMut<UiClickBlocker>) {
+    blocker.just_clicked_ui = false;
 }

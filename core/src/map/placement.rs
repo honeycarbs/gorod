@@ -10,6 +10,7 @@ pub fn collect_placement_intents(
     mouse_button: Res<ButtonInput<MouseButton>>,
     cursor_pos: Res<CursorWorldPos>,
     current_tile_type: Res<CurrentTileType>,
+    ui_click_blocker: Res<UiClickBlocker>,
     tilemap_q: Query<(
         &TilemapSize,
         &TilemapGridSize,
@@ -21,6 +22,10 @@ pub fn collect_placement_intents(
     mut intent_writer: MessageWriter<PlacementIntent>,
 ) {
     if !mouse_button.just_pressed(MouseButton::Left) {
+        return;
+    }
+
+    if ui_click_blocker.just_clicked_ui {
         return;
     }
 

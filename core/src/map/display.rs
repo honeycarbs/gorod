@@ -1,29 +1,101 @@
 use bevy::prelude::*;
 
-use super::resources::CurrentTileType;
+use super::resources::{CurrentTileType, UiClickBlocker};
 use crate::budget::BuildingType;
 
 #[derive(Component)]
 pub struct SelectedTileDisplayText;
 
+#[derive(Component)]
+pub struct TileSelectButton {
+    building_type: BuildingType,
+}
+
+fn button_base_color(building_type: BuildingType) -> Color {
+    match building_type {
+        BuildingType::Residential => Color::srgba(0.6, 0.8, 1.0, 1.0),
+        BuildingType::Commercial => Color::srgba(0.6, 1.0, 0.6, 1.0),
+        BuildingType::Industry => Color::srgba(1.0, 0.9, 0.6, 1.0),
+        BuildingType::Road => Color::srgba(0.8, 0.8, 0.8, 1.0),
+    }
+}
+
 pub fn setup_selected_tile_display(mut commands: Commands) {
-    commands.spawn((
-        Text::new("Selected: Road (O)"),
-        Node {
+    // Full-width top bar, with the selected text centered inside it.
+    commands
+        .spawn((Node {
             position_type: PositionType::Absolute,
-            bottom: Val::Px(10.0),
-            right: Val::Px(10.0),
-            padding: UiRect::all(Val::Px(10.0)),
+            top: Val::Px(10.0),
+            left: Val::Px(0.0),
+            right: Val::Px(0.0),
+            justify_content: JustifyContent::Center,
+            align_items: AlignItems::Center,
             ..default()
-        },
-        TextFont {
-            font_size: 18.0,
-            ..default()
-        },
-        TextColor(Color::WHITE),
-        BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.7)),
-        SelectedTileDisplayText,
-    ));
+        },))
+        .with_children(|parent| {
+            parent.spawn((
+                Text::new("Selected: Road (O)"),
+                TextFont {
+                    font_size: 18.0,
+                    ..default()
+                },
+                TextColor(Color::WHITE),
+                BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.7)),
+                SelectedTileDisplayText,
+            ));
+        });
+}
+
+pub fn setup_tile_select_buttons(mut commands: Commands) {
+    let container = commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                bottom: Val::Px(10.0),
+                right: Val::Px(10.0),
+                flex_direction: FlexDirection::Row,
+                column_gap: Val::Px(6.0),
+                padding: UiRect::all(Val::Px(4.0)),
+                ..default()
+            },
+            BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.5)),
+        ))
+        .id();
+
+    let spawn_button =
+        |parent: Entity, building_type: BuildingType, label: &str, commands: &mut Commands| {
+            commands.entity(parent).with_children(|parent| {
+                parent
+                    .spawn((
+                        Button,
+                        Node {
+                            width: Val::Px(32.0),
+                            height: Val::Px(32.0),
+                            justify_content: JustifyContent::Center,
+                            align_items: AlignItems::Center,
+                            ..default()
+                        },
+                        BackgroundColor(button_base_color(building_type)),
+                        TileSelectButton { building_type },
+                    ))
+                    .with_children(|button_parent| {
+                        button_parent.spawn((
+                            Text::new(label),
+                            TextFont {
+                                font_size: 16.0,
+                                ..default()
+                            },
+                            TextColor(Color::BLACK),
+                        ));
+                    });
+            });
+        };
+
+    // For now, buttons use letters instead of sprites. sprites will be added later
+    spawn_button(container, BuildingType::Residential, "R", &mut commands);
+    spawn_button(container, BuildingType::Commercial, "C", &mut commands);
+    spawn_button(container, BuildingType::Industry, "I", &mut commands);
+    spawn_button(container, BuildingType::Road, "O", &mut commands);
 }
 
 pub fn update_selected_tile_display(
@@ -49,4 +121,48 @@ pub fn update_selected_tile_display(
     text.0 = format!("Selected: {}", label);
 }
 
+pub fn handle_tile_select_button_presses(
+    mut interaction_q: Query<
+        (&Interaction, &TileSelectButton),
+        (Changed<Interaction>, With<Button>),
+    >,
+    mut current_tile_type: ResMut<CurrentTileType>,
+    mut ui_click_blocker: ResMut<UiClickBlocker>,
+) {
+    for (interaction, button) in interaction_q.iter_mut() {
+        match *interaction {
+            Interaction::Pressed => {
+                ui_click_blocker.just_clicked_ui = true;
+                current_tile_type.texture_index = match button.building_type {
+                    BuildingType::Residential => 2,
+                    BuildingType::Commercial => 3,
+                    BuildingType::Industry => 4,
+                    BuildingType::Road => 5,
+                };
+            }
+            Interaction::Hovered => {}
+            Interaction::None => {}
+        }
+    }
+}
 
+pub fn update_tile_select_button_colors(
+    current_tile_type: Res<CurrentTileType>,
+    mut query: Query<(&TileSelectButton, &mut BackgroundColor)>,
+) {
+    if !current_tile_type.is_changed() {
+        return;
+    }
+
+    let active_type = BuildingType::from_texture_index(current_tile_type.texture_index);
+
+    for (button, mut bg) in query.iter_mut() {
+        if Some(button.building_type) == active_type {
+            // Highlight currently selected tile type
+            bg.0 = Color::srgba(1.0, 1.0, 1.0, 1.0);
+        } else {
+            // Reset to base color for other buttons
+            bg.0 = button_base_color(button.building_type);
+        }
+    }
+}

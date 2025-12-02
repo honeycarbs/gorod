@@ -39,9 +39,9 @@ impl BuildingType {
     pub fn cost(&self) -> i64 {
         match self {
             BuildingType::Residential => 1000,
-            BuildingType::Commercial => 1500,
+            BuildingType::Commercial => 1300,
             BuildingType::Industry => 2000,
-            BuildingType::Road => 100,
+            BuildingType::Road => 50,
         }
     }
 
