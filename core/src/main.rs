@@ -32,8 +32,9 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     let texture_handle: Handle<Image> = asset_server.load("tiles.png");
     let map_size = TilemapSize { x: 32, y: 32 };
-    let tile_size = TilemapTileSize { x: 64.0, y: 64.0 }; // Larger tiles
-    let grid_size = tile_size.into();
+
+    let tile_size = TilemapTileSize { x: 96.0, y: 96.0 };
+    let grid_size = TilemapGridSize { x: 96.0, y: 96.0 };
 
     let tilemap_entity = commands.spawn_empty().id();
     let mut tile_storage = TileStorage::empty(map_size);

@@ -1,5 +1,7 @@
+use bevy::math::UVec2;
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
+use bevy_image::TextureAtlasLayout;
 use std::collections::HashSet;
 
 /// Texture index for the abandoned (grey) tile in `tiles.png`.
@@ -60,4 +62,41 @@ pub fn update_cursor_world_pos(
 
 pub fn reset_ui_click_blocker(mut blocker: ResMut<UiClickBlocker>) {
     blocker.just_clicked_ui = false;
+}
+
+/// Number of residential building variants in the residential sprite sheet.
+pub const RESIDENTIAL_VARIANT_COUNT: usize = 5;
+
+#[derive(Resource)]
+pub struct ResidentialBuildingAtlas {
+    pub texture: Handle<Image>,
+    pub layout: Handle<TextureAtlasLayout>,
+    pub variants: usize,
+}
+
+#[derive(Component)]
+pub struct ResidentialBuilding {
+    pub tile_pos: TilePos,
+}
+
+pub fn setup_residential_building_atlas(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut layouts: ResMut<Assets<TextureAtlasLayout>>,
+) {
+    let texture: Handle<Image> = asset_server.load("houses.png");
+
+    let layout = layouts.add(TextureAtlasLayout::from_grid(
+        UVec2::new(96, 96),
+        1,
+        RESIDENTIAL_VARIANT_COUNT as u32,
+        None,
+        None,
+    ));
+
+    commands.insert_resource(ResidentialBuildingAtlas {
+        texture,
+        layout,
+        variants: RESIDENTIAL_VARIANT_COUNT,
+    });
 }

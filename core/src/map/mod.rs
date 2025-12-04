@@ -25,6 +25,7 @@ impl Plugin for TilePlacementPlugin {
                 (
                     display::setup_selected_tile_display,
                     display::setup_tile_select_buttons,
+                    resources::setup_residential_building_atlas,
                 ),
             )
             .add_systems(

@@ -1,4 +1,6 @@
 use bevy::prelude::*;
+use bevy_image::TextureAtlas;
+use rand::Rng;
 use bevy_ecs_tilemap::prelude::*;
 
 use super::events::*;
@@ -57,7 +59,18 @@ pub fn execute_placement_intents(
     mut failed_events: MessageWriter<TransactionFailed>,
     mut intent_reader: MessageReader<PlacementIntent>,
     mut tile_q: Query<(&TilePos, &mut TileTextureIndex)>,
+    residential_atlas: Res<ResidentialBuildingAtlas>,
+    mut commands: Commands,
+    map_q: Query<(&TilemapSize, &TilemapGridSize, &Transform)>,
 ) {
+    let (map_size, grid_size, map_transform) = if let Some(v) = map_q.iter().next() {
+        v
+    } else {
+        return;
+    };
+
+    let mut rng = rand::thread_rng();
+
     for intent in intent_reader.read() {
         let desired_pos = intent.tile_pos;
 
@@ -109,6 +122,26 @@ pub fn execute_placement_intents(
                 building_type: intent.building_type,
                 tile_pos: *tile_pos,
             });
+
+            if intent.building_type == BuildingType::Residential && residential_atlas.variants > 0 {
+                let world_pos = tile_center_to_world(tile_pos, map_size, grid_size, map_transform);
+                let variant_index = rng.gen_range(0..residential_atlas.variants);
+                let y_offset = grid_size.y * 0.25;
+
+                let sprite = Sprite::from_atlas_image(
+                    residential_atlas.texture.clone(),
+                    TextureAtlas {
+                        layout: residential_atlas.layout.clone(),
+                        index: variant_index,
+                    },
+                );
+
+                commands.spawn((
+                    sprite,
+                    Transform::from_xyz(world_pos.x, world_pos.y + y_offset, 10.0),
+                    ResidentialBuilding { tile_pos: *tile_pos },
+                ));
+            }
 
             break;
         }

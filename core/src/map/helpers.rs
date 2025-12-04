@@ -7,6 +7,22 @@ pub fn cursor_to_map_pos(cursor_pos: Vec2, map_transform: &Transform) -> Vec2 {
     cursor_in_map_pos.xy()
 }
 
+/// Convert a `TilePos` into the world-space center of that tile for a centered tilemap.
+pub fn tile_center_to_world(
+    tile_pos: &TilePos,
+    map_size: &TilemapSize,
+    grid_size: &TilemapGridSize,
+    map_transform: &Transform,
+) -> Vec3 {
+    let half_width = map_size.x as f32 * grid_size.x / 2.0;
+    let half_height = map_size.y as f32 * grid_size.y / 2.0;
+
+    let x = -half_width + (tile_pos.x as f32 + 0.5) * grid_size.x;
+    let y = -half_height + (tile_pos.y as f32 + 0.5) * grid_size.y;
+
+    map_transform.transform_point(Vec3::new(x, y, 0.0))
+}
+
 pub fn count_placed_tiles(
     tile_storage: &TileStorage,
     tile_texture_q: &Query<&mut TileTextureIndex>,

@@ -32,6 +32,8 @@ pub fn demolish_tile_on_click(
     mut inputs: DemolitionInputs,
     mut placeable_map: ResMut<PlaceableMap>,
     mut demolished_writer: MessageWriter<BuildingDemolished>,
+    mut commands: Commands,
+    building_sprites_q: Query<(Entity, &ResidentialBuilding)>,
 ) {
     if !inputs.mouse_button.just_pressed(MouseButton::Left) {
         return;
@@ -102,6 +104,13 @@ pub fn demolish_tile_on_click(
                         &inputs.tile_texture_q,
                         map_size,
                     );
+
+                    for (entity, building) in building_sprites_q.iter() {
+                        if building.tile_pos == tile_pos {
+                            commands.entity(entity).despawn();
+                            break;
+                        }
+                    }
                 }
             }
         }
