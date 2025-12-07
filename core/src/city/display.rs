@@ -14,21 +14,18 @@ pub enum CityStatKind {
 }
 
 pub fn setup_city_stats_display(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let font: Handle<Font> =
-        asset_server.load("fonts/Silkscreen/Silkscreen-Regular.ttf");
+    let font: Handle<Font> = asset_server.load("fonts/Silkscreen/Silkscreen-Regular.ttf");
 
     // Root container: two cards laid out horizontally
     commands
-        .spawn((
-            Node {
-                position_type: PositionType::Absolute,
-                bottom: Val::Px(10.0),
-                left: Val::Px(10.0),
-                flex_direction: FlexDirection::Row,
-                column_gap: Val::Px(16.0),
-                ..default()
-            },
-        ))
+        .spawn((Node {
+            position_type: PositionType::Absolute,
+            bottom: Val::Px(10.0),
+            left: Val::Px(10.0),
+            flex_direction: FlexDirection::Row,
+            column_gap: Val::Px(16.0),
+            ..default()
+        },))
         .with_children(|parent| {
             // Left card: population and capacities
             parent
@@ -87,7 +84,7 @@ pub fn setup_city_stats_display(mut commands: Commands, asset_server: Res<AssetS
                 .with_children(|card| {
                     // Title
                     card.spawn((
-                            Text::new("Demand"),
+                        Text::new("Demand"),
                         TextFont {
                             font: font.clone(),
                             font_size: 16.0,

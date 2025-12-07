@@ -5,18 +5,18 @@ use crate::time::GameClock;
 
 use super::resources::Budget;
 
-// income per productive worker per day
-const WORKER_TAX_PER_DAY: i64 = 4;
+// income per productive worker per day (tuned for a snappier early game)
+const WORKER_TAX_PER_DAY: i64 = 8;
 
 // corporate income per productive worker share
-const INDUSTRY_PROFIT_PER_WORKER: f32 = 1.5;
-const COMMERCIAL_PROFIT_PER_WORKER: f32 = 1.0;
+const INDUSTRY_PROFIT_PER_WORKER: f32 = 3.0;
+const COMMERCIAL_PROFIT_PER_WORKER: f32 = 2.0;
 
-// upkeep per building per day
-const ROAD_UPKEEP_PER_TILE: i64 = 1;
+// upkeep per building per day (slightly softened so the city can grow)
+const ROAD_UPKEEP_PER_TILE: i64 = 0;
 const RES_UPKEEP_PER_BUILDING: i64 = 0;
-const COM_UPKEEP_PER_BUILDING: i64 = 3;
-const IND_UPKEEP_PER_BUILDING: i64 = 5;
+const COM_UPKEEP_PER_BUILDING: i64 = 2;
+const IND_UPKEEP_PER_BUILDING: i64 = 4;
 
 const NEGATIVE_BALANCE_PENALTY_DAYS: u32 = 3;
 const NEGATIVE_BALANCE_HAPPINESS_PENALTY: f32 = 0.01;

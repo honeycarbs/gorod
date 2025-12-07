@@ -9,15 +9,13 @@ mod time;
 
 fn main() {
     App::new()
-        .add_plugins(
-            DefaultPlugins.set(WindowPlugin {
-                primary_window: Some(Window {
-                    title: "Gorod".into(),
-                    ..default()
-                }),
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                title: "Gorod".into(),
                 ..default()
             }),
-        )
+            ..default()
+        }))
         .add_plugins(TilemapPlugin)
         .add_plugins(time::GameTimePlugin)
         .add_plugins(budget::BudgetPlugin)

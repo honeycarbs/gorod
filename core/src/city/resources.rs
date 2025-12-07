@@ -158,10 +158,7 @@ pub fn apply_demolition_happiness(
             if delta < 0.0 {
                 info!(
                     "Happiness decreased by {:.3} due to demolition of {:?} at {:?} (nearby_residential={})",
-                    delta,
-                    event.building_type,
-                    event.tile_pos,
-                    nearby_residential
+                    delta, event.building_type, event.tile_pos, nearby_residential
                 );
             }
             population.happiness = (population.happiness + delta).clamp(0.0, 1.0);
@@ -262,10 +259,7 @@ pub fn apply_placement_happiness(
             if delta < 0.0 {
                 info!(
                     "Happiness decreased by {:.3} due to placement of {:?} at {:?} (nearby_residential={})",
-                    delta,
-                    event.building_type,
-                    event.tile_pos,
-                    nearby_residential
+                    delta, event.building_type, event.tile_pos, nearby_residential
                 );
             }
             population.happiness = (population.happiness + delta).clamp(0.0, 1.0);

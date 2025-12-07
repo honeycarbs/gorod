@@ -96,8 +96,12 @@ pub fn demolish_tile_on_click(
                     return;
                 }
 
-                let should_be_placeable =
-                    is_within_range_of_placed_tile(&tile_pos, tile_storage, &inputs.tile_texture_q, map_size);
+                let should_be_placeable = is_within_range_of_placed_tile(
+                    &tile_pos,
+                    tile_storage,
+                    &inputs.tile_texture_q,
+                    map_size,
+                );
 
                 if let Ok(mut texture_index) = inputs.tile_texture_q.get_mut(tile_entity) {
                     if should_be_placeable {

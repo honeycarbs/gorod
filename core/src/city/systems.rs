@@ -2,7 +2,9 @@ use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::{TilePos, TileStorage, TileTextureIndex, TilemapSize};
 
 use crate::budget::{BuildingDemolished, BuildingPlaced, BuildingType};
-use crate::map::ABANDONED_TEXTURE_INDEX;
+use crate::map::{
+    ABANDONED_TEXTURE_INDEX, CommercialBuilding, IndustryBuilding, ResidentialBuilding,
+};
 use crate::time::GameClock;
 
 use super::display::{setup_city_stats_display, update_city_stats_display};
@@ -137,12 +139,9 @@ pub fn update_population(
     let housing_cap = services.housing_capacity.max(0);
     let job_cap = services.job_capacity.max(0);
 
+    // Population is primarily limited by housing
     // If there are no jobs at all people gradually leave the city
-    let max_population = if job_cap == 0 {
-        0
-    } else {
-        housing_cap.min(job_cap)
-    };
+    let max_population = if housing_cap == 0 { 0 } else { housing_cap };
 
     let diff = max_population - population.population;
 
@@ -150,8 +149,8 @@ pub fn update_population(
         return;
     }
 
-    // Move population faster toward the target (about 40% of the gap per day)
-    let mut step = ((diff as f32) * 0.40).round() as i64;
+    // Move population faster toward the target (about 70% of the gap per day)
+    let mut step = ((diff as f32) * 0.70).round() as i64;
     if step == 0 {
         step = diff.signum();
     }
@@ -161,22 +160,50 @@ pub fn update_population(
     population.population = population.population.max(0);
     info!(
         "Population changed from {} to {} (target {}, housing_capacity {}, job_capacity {})",
-        old_pop, population.population, max_population, services.housing_capacity, services.job_capacity
+        old_pop,
+        population.population,
+        max_population,
+        services.housing_capacity,
+        services.job_capacity
     );
 }
 
 pub fn update_demands(mut services: ResMut<CityServices>, population: Res<CityPopulation>) {
     let pop = population.population.max(0);
-    services.housing_demand = (pop - services.housing_capacity).max(0);
+
+    // When people are very happy they start looking for more housing
+    // even if everyone is already housed. This creates a gentle, happiness‑driven
+    // growth pressure that encourages city expansion.
+    let mut happy_growth_bonus: i64 = 0;
+    if pop > 0 && population.happiness >= 0.95 {
+        // Scale bonus with population and how close we are to 1.0 happiness.
+        // Roughly: at 1.0 happiness, each 100 citizens add ~1 extra unit of demand.
+        let happiness_factor = ((population.happiness - 0.95) / 0.05).clamp(0.0, 1.0);
+        happy_growth_bonus =
+            ((pop as f32 / 100.0) * happiness_factor).ceil() as i64;
+    }
+
+    services.housing_demand =
+        (pop + happy_growth_bonus - services.housing_capacity).max(0);
     services.job_demand = (pop - services.job_capacity).max(0);
     services.entertainment_demand = (pop - services.entertainment_capacity).max(0);
 }
 
-/// recompute happiness from current demands
+/// Recompute happiness from current demands once per in‑game day.
+/// This nudges happiness toward a target instead of overwriting it,
+/// so short‑term events (demolition, budget issues, etc.) can have
+/// a visible effect that slowly recovers.
 pub fn update_happiness_from_demands(
+    clock: Res<GameClock>,
     services: Res<CityServices>,
     mut population: ResMut<CityPopulation>,
+    mut last_processed_day: Local<u32>,
 ) {
+    if *last_processed_day == clock.day {
+        return;
+    }
+    *last_processed_day = clock.day;
+
     let pop = population.population.max(0);
     let old_happiness = population.happiness;
 
@@ -196,17 +223,25 @@ pub fn update_happiness_from_demands(
     } else {
         0.0
     };
-    let entertainment_pressure = (entertainment_shortfall - 0.15).max(0.0);
 
-    let pressure = 0.50 * housing_pressure + 0.35 * job_pressure + 0.15 * entertainment_pressure;
+    // Weight shortages; housing and jobs hurt more than entertainment.
+    let mut pressure = 0.8 * housing_pressure
+        + 0.6 * job_pressure
+        + 0.25 * entertainment_shortfall;
+    // Cap extreme pressure so it doesn't explode numerically
+    if pressure > 1.5 {
+        pressure = 1.5;
+    }
 
-    let happiness = (1.0 - pressure).clamp(0.0, 1.0);
-    population.happiness = happiness;
+    let target_happiness = (1.0 - pressure).clamp(0.0, 1.0);
+    // Ease 25% of the way toward the target per in‑game day
+    let new_happiness = old_happiness + (target_happiness - old_happiness) * 0.25;
+    population.happiness = new_happiness.clamp(0.0, 1.0);
 
-    if happiness + 1e-4 < old_happiness {
+    if new_happiness + 1e-4 < old_happiness {
         info!(
-            "Happiness decreased from {:.3} to {:.3} due to service pressures: housing={:.3}, jobs={:.3}, entertainment={:.3}",
-            old_happiness, happiness, housing_pressure, job_pressure, entertainment_pressure
+            "Happiness decreased from {:.3} to {:.3} due to service pressures: housing={:.3}, jobs={:.3}, entertainment_shortfall={:.3}",
+            old_happiness, new_happiness, housing_pressure, job_pressure, entertainment_shortfall
         );
     }
 }
@@ -220,10 +255,19 @@ pub fn apply_abandonment(
     mut tile_texture_q: Query<&mut TileTextureIndex>,
     mut demolished_writer: MessageWriter<BuildingDemolished>,
     mut last_abandonment_day: Local<u32>,
+    mut commands: Commands,
+    building_sprites_q: Query<
+        (
+            Entity,
+            Option<&'static ResidentialBuilding>,
+            Option<&'static CommercialBuilding>,
+            Option<&'static IndustryBuilding>,
+        ),
+    >,
 ) {
-    const ABANDONMENT_INTERVAL_DAYS: u32 = 7;
+    const ABANDONMENT_INTERVAL_DAYS: u32 = 3;
     // If people are reasonably happy skip abandonment
-    const MIN_HAPPINESS_FOR_ABANDON: f32 = 0.5;
+    const MIN_HAPPINESS_FOR_ABANDON: f32 = 0.7;
 
     if clock.day < *last_abandonment_day + ABANDONMENT_INTERVAL_DAYS {
         return;
@@ -265,7 +309,12 @@ pub fn apply_abandonment(
 
     info!(
         "Abandonment tick: pop={}, happiness={:.2}, housing_demand={}, job_capacity={}, effective_workers={:.1}, staffing_ratio={:.2}",
-        pop, population.happiness, services.housing_demand, job_cap, effective_workers, staffing_ratio
+        pop,
+        population.happiness,
+        services.housing_demand,
+        job_cap,
+        effective_workers,
+        staffing_ratio
     );
 
     let residential_to_abandon: usize = if housing_shortage { 1 } else { 0 };
@@ -298,6 +347,18 @@ pub fn apply_abandonment(
                             building_type: btype,
                             tile_pos: pos,
                         });
+
+                        // Despawn any 3D/2D building sprites sitting on top of this tile
+                        for (entity, residential, _commercial, _industry) in
+                            building_sprites_q.iter()
+                        {
+                            if let Some(building) = residential
+                                && building.tile_pos == pos
+                            {
+                                commands.entity(entity).despawn();
+                            }
+                        }
+
                         remaining -= 1;
                     }
                 }
@@ -340,6 +401,27 @@ pub fn apply_abandonment(
                             building_type: btype,
                             tile_pos: pos,
                         });
+
+                        // Despawn any commercial / industry sprites on this tile
+                        for (entity, _residential, commercial, industry) in
+                            building_sprites_q.iter()
+                        {
+                            let mut should_despawn = false;
+                            if let Some(building) = commercial
+                                && building.tile_pos == pos
+                            {
+                                should_despawn = true;
+                            }
+                            if let Some(building) = industry
+                                && building.tile_pos == pos
+                            {
+                                should_despawn = true;
+                            }
+
+                            if should_despawn {
+                                commands.entity(entity).despawn();
+                            }
+                        }
 
                         remaining_jobs -= jobs_here;
                     }

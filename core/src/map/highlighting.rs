@@ -1,9 +1,9 @@
 use super::helpers::*;
 use super::resources::*;
+use crate::budget::BuildingType;
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 use bevy_image::TextureAtlas;
-use crate::budget::BuildingType;
 
 pub fn highlight_hovered_tile(
     mut commands: Commands,
@@ -161,12 +161,7 @@ pub fn update_road_hover_preview(
                     index: 2, // residential tile index
                 },
             );
-            tile_sprite.color = Color::srgba(
-                193.0 / 255.0,
-                231.0 / 255.0,
-                110.0 / 255.0,
-                0.2,
-            ); // #c1e76e at ~20% opacity
+            tile_sprite.color = Color::srgba(193.0 / 255.0, 231.0 / 255.0, 110.0 / 255.0, 0.2); // #c1e76e at ~20% opacity
 
             commands.spawn((
                 tile_sprite,
@@ -176,8 +171,7 @@ pub fn update_road_hover_preview(
 
             // Preview selected residential building variant a few pixels above the tile
             let variants = residential_atlas.variants.max(1);
-            let variant_index =
-                (current_residential_variant.index as usize) % variants;
+            let variant_index = (current_residential_variant.index as usize) % variants;
             let y_offset = 6.0;
 
             let building_sprite = Sprite::from_atlas_image(
@@ -210,12 +204,7 @@ pub fn update_road_hover_preview(
                     index: 3, // commercial tile index
                 },
             );
-            tile_sprite.color = Color::srgba(
-                123.0 / 255.0,
-                194.0 / 255.0,
-                212.0 / 255.0,
-                0.2,
-            ); // #7bc2d4 at ~20% opacity
+            tile_sprite.color = Color::srgba(123.0 / 255.0, 194.0 / 255.0, 212.0 / 255.0, 0.2); // #7bc2d4 at ~20% opacity
 
             commands.spawn((
                 tile_sprite,
@@ -225,8 +214,7 @@ pub fn update_road_hover_preview(
 
             // Preview selected commercial building variant a few pixels above the tile
             let variants = commercial_atlas.variants.max(1);
-            let variant_index =
-                (current_commercial_variant.index as usize) % variants;
+            let variant_index = (current_commercial_variant.index as usize) % variants;
             let y_offset = 6.0;
 
             let building_sprite = Sprite::from_atlas_image(
@@ -259,12 +247,7 @@ pub fn update_road_hover_preview(
                     index: 4, // industry tile index
                 },
             );
-            tile_sprite.color = Color::srgba(
-                123.0 / 255.0,
-                194.0 / 255.0,
-                212.0 / 255.0,
-                0.2,
-            ); // #7bc2d4 at ~20% opacity
+            tile_sprite.color = Color::srgba(123.0 / 255.0, 194.0 / 255.0, 212.0 / 255.0, 0.2); // #7bc2d4 at ~20% opacity
 
             commands.spawn((
                 tile_sprite,
@@ -274,8 +257,7 @@ pub fn update_road_hover_preview(
 
             // Preview selected industry building variant a few pixels above the tile
             let variants = industry_atlas.variants.max(1);
-            let variant_index =
-                (current_industry_variant.index as usize) % variants;
+            let variant_index = (current_industry_variant.index as usize) % variants;
             let y_offset = 6.0;
 
             let building_sprite = Sprite::from_atlas_image(

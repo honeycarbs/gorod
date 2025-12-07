@@ -1,5 +1,11 @@
 use bevy::prelude::*;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HelpPage {
+    First,
+    Second,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum TimeSpeed {
     Paused,
@@ -32,8 +38,19 @@ pub struct GameClock {
     pub second: u8, // 0-59
 }
 
-#[derive(Resource, Default)]
+#[derive(Resource)]
 pub struct HelpOverlayState {
     pub active: bool,
     pub previous_speed: Option<TimeSpeed>,
+    pub page: HelpPage,
+}
+
+impl Default for HelpOverlayState {
+    fn default() -> Self {
+        Self {
+            active: false,
+            previous_speed: None,
+            page: HelpPage::First,
+        }
+    }
 }

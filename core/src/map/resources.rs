@@ -25,9 +25,7 @@ pub struct CurrentTileType {
 
 impl Default for CurrentTileType {
     fn default() -> Self {
-        Self {
-            texture_index: 0,
-        }
+        Self { texture_index: 0 }
     }
 }
 

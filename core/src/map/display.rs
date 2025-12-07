@@ -29,8 +29,7 @@ fn button_base_color(building_type: BuildingType) -> Color {
 }
 
 pub fn setup_selected_tile_display(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let font: Handle<Font> =
-        asset_server.load("fonts/Silkscreen/Silkscreen-Regular.ttf");
+    let font: Handle<Font> = asset_server.load("fonts/Silkscreen/Silkscreen-Regular.ttf");
 
     // Full-width top bar with the selected text centered inside it
     commands
@@ -59,8 +58,7 @@ pub fn setup_selected_tile_display(mut commands: Commands, asset_server: Res<Ass
 }
 
 pub fn setup_tile_select_buttons(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let font: Handle<Font> =
-        asset_server.load("fonts/Silkscreen/Silkscreen-Regular.ttf");
+    let font: Handle<Font> = asset_server.load("fonts/Silkscreen/Silkscreen-Regular.ttf");
 
     let container = commands
         .spawn((
@@ -82,33 +80,33 @@ pub fn setup_tile_select_buttons(mut commands: Commands, asset_server: Res<Asset
                         label: &str,
                         font: &Handle<Font>,
                         commands: &mut Commands| {
-            commands.entity(parent).with_children(|parent| {
-                parent
-                    .spawn((
-                        Button,
-                        Node {
-                            width: Val::Px(32.0),
-                            height: Val::Px(32.0),
-                            justify_content: JustifyContent::Center,
-                            align_items: AlignItems::Center,
+        commands.entity(parent).with_children(|parent| {
+            parent
+                .spawn((
+                    Button,
+                    Node {
+                        width: Val::Px(32.0),
+                        height: Val::Px(32.0),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        ..default()
+                    },
+                    BackgroundColor(button_base_color(building_type)),
+                    TileSelectButton { building_type },
+                ))
+                .with_children(|button_parent| {
+                    button_parent.spawn((
+                        Text::new(label),
+                        TextFont {
+                            font: font.clone(),
+                            font_size: 16.0,
                             ..default()
                         },
-                        BackgroundColor(button_base_color(building_type)),
-                        TileSelectButton { building_type },
-                    ))
-                    .with_children(|button_parent| {
-                        button_parent.spawn((
-                            Text::new(label),
-                            TextFont {
-                                font: font.clone(),
-                                font_size: 16.0,
-                                ..default()
-                            },
-                            TextColor(Color::BLACK),
-                        ));
-                    });
-            });
-        };
+                        TextColor(Color::BLACK),
+                    ));
+                });
+        });
+    };
 
     spawn_button(
         container,
@@ -124,20 +122,8 @@ pub fn setup_tile_select_buttons(mut commands: Commands, asset_server: Res<Asset
         &font,
         &mut commands,
     );
-    spawn_button(
-        container,
-        BuildingType::Industry,
-        "I",
-        &font,
-        &mut commands,
-    );
-    spawn_button(
-        container,
-        BuildingType::Road,
-        "O",
-        &font,
-        &mut commands,
-    );
+    spawn_button(container, BuildingType::Industry, "I", &font, &mut commands);
+    spawn_button(container, BuildingType::Road, "O", &font, &mut commands);
 }
 
 pub fn update_selected_tile_display(

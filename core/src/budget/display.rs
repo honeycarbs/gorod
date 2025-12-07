@@ -5,8 +5,7 @@ use bevy::prelude::*;
 pub struct BudgetDisplayText;
 
 pub fn setup_budget_display(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let font: Handle<Font> =
-        asset_server.load("fonts/Silkscreen/Silkscreen-Regular.ttf");
+    let font: Handle<Font> = asset_server.load("fonts/Silkscreen/Silkscreen-Regular.ttf");
 
     commands.spawn((
         Text::new("Budget: $50,000"),

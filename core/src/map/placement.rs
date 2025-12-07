@@ -1,6 +1,6 @@
 use bevy::prelude::*;
-use bevy_image::TextureAtlas;
 use bevy_ecs_tilemap::prelude::*;
+use bevy_image::TextureAtlas;
 
 use super::events::*;
 use super::helpers::*;
@@ -136,8 +136,7 @@ pub fn execute_placement_intents(
                 tile_pos: *tile_pos,
             });
 
-            if intent.building_type == BuildingType::Residential && residential_atlas.variants > 0
-            {
+            if intent.building_type == BuildingType::Residential && residential_atlas.variants > 0 {
                 let world_pos = tile_center_to_world(tile_pos, map_size, grid_size, map_transform);
                 let clamped_index = (current_residential_variant.index as usize)
                     % residential_atlas.variants.max(1);
@@ -154,14 +153,16 @@ pub fn execute_placement_intents(
                 commands.spawn((
                     sprite,
                     Transform::from_xyz(world_pos.x, world_pos.y + y_offset, 10.0),
-                    ResidentialBuilding { tile_pos: *tile_pos },
+                    ResidentialBuilding {
+                        tile_pos: *tile_pos,
+                    },
                 ));
             } else if intent.building_type == BuildingType::Commercial
                 && commercial_atlas.variants > 0
             {
                 let world_pos = tile_center_to_world(tile_pos, map_size, grid_size, map_transform);
-                let clamped_index = (current_commercial_variant.index as usize)
-                    % commercial_atlas.variants.max(1);
+                let clamped_index =
+                    (current_commercial_variant.index as usize) % commercial_atlas.variants.max(1);
                 let y_offset = 6.0;
 
                 let sprite = Sprite::from_atlas_image(
@@ -175,13 +176,15 @@ pub fn execute_placement_intents(
                 commands.spawn((
                     sprite,
                     Transform::from_xyz(world_pos.x, world_pos.y + y_offset, 10.0),
-                    CommercialBuilding { tile_pos: *tile_pos },
+                    CommercialBuilding {
+                        tile_pos: *tile_pos,
+                    },
                 ));
             } else if intent.building_type == BuildingType::Industry && industry_atlas.variants > 0
             {
                 let world_pos = tile_center_to_world(tile_pos, map_size, grid_size, map_transform);
-                let clamped_index = (current_industry_variant.index as usize)
-                    % industry_atlas.variants.max(1);
+                let clamped_index =
+                    (current_industry_variant.index as usize) % industry_atlas.variants.max(1);
                 let y_offset = 6.0;
 
                 let sprite = Sprite::from_atlas_image(
@@ -195,7 +198,9 @@ pub fn execute_placement_intents(
                 commands.spawn((
                     sprite,
                     Transform::from_xyz(world_pos.x, world_pos.y + y_offset, 10.0),
-                    IndustryBuilding { tile_pos: *tile_pos },
+                    IndustryBuilding {
+                        tile_pos: *tile_pos,
+                    },
                 ));
             } else if intent.building_type == BuildingType::Road && road_atlas.variants > 0 {
                 let world_pos = tile_center_to_world(tile_pos, map_size, grid_size, map_transform);
@@ -213,7 +218,9 @@ pub fn execute_placement_intents(
                 commands.spawn((
                     sprite,
                     Transform::from_xyz(world_pos.x, world_pos.y, 5.0),
-                    RoadSegment { tile_pos: *tile_pos },
+                    RoadSegment {
+                        tile_pos: *tile_pos,
+                    },
                 ));
             }
 
@@ -277,8 +284,7 @@ pub fn change_tile_type(
                     let variants = RESIDENTIAL_VARIANT_COUNT as i32;
                     if variants > 0 {
                         let new_index = current + delta;
-                        current_residential_variant.index =
-                            new_index.rem_euclid(variants) as u32;
+                        current_residential_variant.index = new_index.rem_euclid(variants) as u32;
                         info!(
                             "Selected residential variant: {}",
                             current_residential_variant.index
@@ -290,8 +296,7 @@ pub fn change_tile_type(
                     let variants = COMMERCIAL_VARIANT_COUNT as i32;
                     if variants > 0 {
                         let new_index = current + delta;
-                        current_commercial_variant.index =
-                            new_index.rem_euclid(variants) as u32;
+                        current_commercial_variant.index = new_index.rem_euclid(variants) as u32;
                         info!(
                             "Selected commercial variant: {}",
                             current_commercial_variant.index
@@ -316,8 +321,7 @@ pub fn change_tile_type(
                     let variants = INDUSTRY_VARIANT_COUNT as i32;
                     if variants > 0 {
                         let new_index = current + delta;
-                        current_industry_variant.index =
-                            new_index.rem_euclid(variants) as u32;
+                        current_industry_variant.index = new_index.rem_euclid(variants) as u32;
                         info!(
                             "Selected industry variant: {}",
                             current_industry_variant.index
