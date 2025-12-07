@@ -47,7 +47,7 @@ pub fn setup_selected_tile_display(mut commands: Commands, asset_server: Res<Ass
                 Text::new("Selected: Road (O)"),
                 TextFont {
                     font,
-                    font_size: 18.0,
+                    font_size: 16.0,
                     ..default()
                 },
                 TextColor(Color::WHITE),

@@ -19,7 +19,7 @@ pub fn setup_time_display(mut commands: Commands, asset_server: Res<AssetServer>
         },
         TextFont {
             font,
-            font_size: 20.0,
+            font_size: 16.0,
             ..default()
         },
         TextColor(Color::WHITE),

@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy::window::{Window, WindowPlugin};
 use bevy_ecs_tilemap::prelude::*;
 mod budget;
 mod camera;
@@ -8,7 +9,15 @@ mod time;
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
+        .add_plugins(
+            DefaultPlugins.set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: "Gorod".into(),
+                    ..default()
+                }),
+                ..default()
+            }),
+        )
         .add_plugins(TilemapPlugin)
         .add_plugins(time::GameTimePlugin)
         .add_plugins(budget::BudgetPlugin)
