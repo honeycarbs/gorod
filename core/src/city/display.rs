@@ -5,7 +5,10 @@ use super::resources::{CityPopulation, CityServices};
 #[derive(Component)]
 pub struct CityStatsDisplayText;
 
-pub fn setup_city_stats_display(mut commands: Commands) {
+pub fn setup_city_stats_display(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let font: Handle<Font> =
+        asset_server.load("fonts/Silkscreen/Silkscreen-Regular.ttf");
+
     commands.spawn((
         Text::new("Pop: 0 | Housing: 0 | Jobs: 0 | Happy: 1.00\nH_Dem: 0 | J_Dem: 0 | E_Dem: 0"),
         Node {
@@ -16,6 +19,7 @@ pub fn setup_city_stats_display(mut commands: Commands) {
             ..default()
         },
         TextFont {
+            font,
             font_size: 18.0,
             ..default()
         },

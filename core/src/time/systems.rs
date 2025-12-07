@@ -2,17 +2,17 @@ use bevy::prelude::*;
 
 use super::resources::*;
 
-// Update game time based on speed mode.
+// Update game time based on speed mode
 //
-// Roughly inspired by Cities: Skylines:
-// - About one in‑game week passes per real‑time minute at normal speed.
-// - Fast is ~2x, UltraFast is ~4x that rate.
+// Roughly inspired by Cities: Skylines
+// - About one in‑game week passes per real‑time minute at normal speed
+// - Fast is ~2x, UltraFast is ~4x that rate
 pub fn update_game_time(time: Res<Time>, mut game_time: ResMut<GameTime>) {
     let multiplier = match game_time.speed {
         TimeSpeed::Paused => 0.0,
-        // 1 week (7 * 86400s) per 60 real seconds ≈ 10080x.
+        // 1 week (7 * 86400s) per 60 real seconds ≈ 10080x
         TimeSpeed::Normal => 10_080.0,
-        // 2x and 4x the normal rate.
+        // 2x and 4x the normal rate
         TimeSpeed::Fast => 20_160.0,
         TimeSpeed::UltraFast => 40_320.0,
     };

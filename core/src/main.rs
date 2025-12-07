@@ -30,7 +30,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         },
     ));
 
-    let texture_handle: Handle<Image> = asset_server.load("tiles.png");
+    let texture_handle: Handle<Image> = asset_server.load("sprites/tiles.png");
     let map_size = TilemapSize { x: 32, y: 32 };
 
     let tile_size = TilemapTileSize { x: 96.0, y: 96.0 };

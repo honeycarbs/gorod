@@ -7,7 +7,7 @@ pub fn cursor_to_map_pos(cursor_pos: Vec2, map_transform: &Transform) -> Vec2 {
     cursor_in_map_pos.xy()
 }
 
-/// Convert a `TilePos` into the world-space center of that tile for a centered tilemap.
+/// Convert a `TilePos` into the world-space center of that tile for a centered tilemap
 pub fn tile_center_to_world(
     tile_pos: &TilePos,
     map_size: &TilemapSize,

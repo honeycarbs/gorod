@@ -27,8 +27,11 @@ fn button_base_color(building_type: BuildingType) -> Color {
     }
 }
 
-pub fn setup_selected_tile_display(mut commands: Commands) {
-    // Full-width top bar, with the selected text centered inside it.
+pub fn setup_selected_tile_display(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let font: Handle<Font> =
+        asset_server.load("fonts/Silkscreen/Silkscreen-Regular.ttf");
+
+    // Full-width top bar with the selected text centered inside it
     commands
         .spawn((Node {
             position_type: PositionType::Absolute,
@@ -43,6 +46,7 @@ pub fn setup_selected_tile_display(mut commands: Commands) {
             parent.spawn((
                 Text::new("Selected: Road (O)"),
                 TextFont {
+                    font,
                     font_size: 18.0,
                     ..default()
                 },
@@ -53,7 +57,10 @@ pub fn setup_selected_tile_display(mut commands: Commands) {
         });
 }
 
-pub fn setup_tile_select_buttons(mut commands: Commands) {
+pub fn setup_tile_select_buttons(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let font: Handle<Font> =
+        asset_server.load("fonts/Silkscreen/Silkscreen-Regular.ttf");
+
     let container = commands
         .spawn((
             Node {
@@ -69,8 +76,11 @@ pub fn setup_tile_select_buttons(mut commands: Commands) {
         ))
         .id();
 
-    let spawn_button =
-        |parent: Entity, building_type: BuildingType, label: &str, commands: &mut Commands| {
+    let spawn_button = |parent: Entity,
+                        building_type: BuildingType,
+                        label: &str,
+                        font: &Handle<Font>,
+                        commands: &mut Commands| {
             commands.entity(parent).with_children(|parent| {
                 parent
                     .spawn((
@@ -89,6 +99,7 @@ pub fn setup_tile_select_buttons(mut commands: Commands) {
                         button_parent.spawn((
                             Text::new(label),
                             TextFont {
+                                font: font.clone(),
                                 font_size: 16.0,
                                 ..default()
                             },
@@ -98,11 +109,34 @@ pub fn setup_tile_select_buttons(mut commands: Commands) {
             });
         };
 
-    // For now, buttons use letters instead of sprites. sprites will be added later
-    spawn_button(container, BuildingType::Residential, "R", &mut commands);
-    spawn_button(container, BuildingType::Commercial, "C", &mut commands);
-    spawn_button(container, BuildingType::Industry, "I", &mut commands);
-    spawn_button(container, BuildingType::Road, "O", &mut commands);
+    spawn_button(
+        container,
+        BuildingType::Residential,
+        "R",
+        &font,
+        &mut commands,
+    );
+    spawn_button(
+        container,
+        BuildingType::Commercial,
+        "C",
+        &font,
+        &mut commands,
+    );
+    spawn_button(
+        container,
+        BuildingType::Industry,
+        "I",
+        &font,
+        &mut commands,
+    );
+    spawn_button(
+        container,
+        BuildingType::Road,
+        "O",
+        &font,
+        &mut commands,
+    );
 }
 
 pub fn update_selected_tile_display(

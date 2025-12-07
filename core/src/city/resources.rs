@@ -8,7 +8,7 @@ const ROAD_NEIGHBOR_RADIUS: i32 = 4;
 
 #[derive(Resource, Debug)]
 pub struct CityPopulation {
-    /// Total number of citizens currently living in the city.
+    /// Total number of citizens currently living in the city
     pub population: i64,
     /// from 0.0 as "everyone is sad" to 1.0 as "everyone is happy"
     pub happiness: f32,
@@ -24,7 +24,7 @@ impl Default for CityPopulation {
 }
 
 /// Describes how much housing, jobs and entertainment the city provides,
-/// and how much of each is currently demanded by the population.
+/// and how much of each is currently demanded by the population
 #[derive(Resource, Debug, Default)]
 pub struct CityServices {
     pub housing_capacity: i64,
@@ -36,7 +36,7 @@ pub struct CityServices {
     pub entertainment_demand: i64,
 }
 
-/// Tracks coarse infrastructure statistics that drive upkeep and income.
+/// Tracks coarse infrastructure statistics that drive upkeep and income
 #[derive(Resource, Debug, Default)]
 pub struct CityInfrastructure {
     pub residential_count: i64,
@@ -170,7 +170,7 @@ pub fn apply_demolition_happiness(
     }
 }
 
-// Maybe later I'll do a full path finding solution, but now a building
+// Maybe later I'll do a full path finding solution but now a building
 // is accessible if there is at least one road tile within a small radius
 fn is_accessible(
     center: &TilePos,

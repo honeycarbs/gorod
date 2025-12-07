@@ -6,6 +6,18 @@ use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 
+type BuildingSpritesQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        Option<&'static ResidentialBuilding>,
+        Option<&'static CommercialBuilding>,
+        Option<&'static IndustryBuilding>,
+        Option<&'static RoadSegment>,
+    ),
+>;
+
 #[derive(SystemParam)]
 pub struct DemolitionInputs<'w, 's> {
     mouse_button: Res<'w, ButtonInput<MouseButton>>,
@@ -33,7 +45,7 @@ pub fn demolish_tile_on_click(
     mut placeable_map: ResMut<PlaceableMap>,
     mut demolished_writer: MessageWriter<BuildingDemolished>,
     mut commands: Commands,
-    building_sprites_q: Query<(Entity, &ResidentialBuilding)>,
+    building_sprites_q: BuildingSpritesQuery<'_, '_>,
 ) {
     if !inputs.mouse_button.just_pressed(MouseButton::Left) {
         return;
@@ -105,10 +117,37 @@ pub fn demolish_tile_on_click(
                         map_size,
                     );
 
-                    for (entity, building) in building_sprites_q.iter() {
-                        if building.tile_pos == tile_pos {
+                    for (entity, residential, commercial, industry, road) in
+                        building_sprites_q.iter()
+                    {
+                        let mut should_despawn = false;
+
+                        if let Some(building) = residential
+                            && building.tile_pos == tile_pos
+                        {
+                            should_despawn = true;
+                        }
+
+                        if let Some(building) = commercial
+                            && building.tile_pos == tile_pos
+                        {
+                            should_despawn = true;
+                        }
+
+                        if let Some(building) = industry
+                            && building.tile_pos == tile_pos
+                        {
+                            should_despawn = true;
+                        }
+
+                        if let Some(road_segment) = road
+                            && road_segment.tile_pos == tile_pos
+                        {
+                            should_despawn = true;
+                        }
+
+                        if should_despawn {
                             commands.entity(entity).despawn();
-                            break;
                         }
                     }
                 }

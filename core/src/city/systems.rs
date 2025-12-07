@@ -122,7 +122,7 @@ pub fn update_infrastructure_from_building_events(
     infra.commercial_job_capacity = infra.commercial_job_capacity.max(0);
 }
 
-/// Adjust population once per in‑game day, based on available housing and jobs.
+/// Adjust population once per in‑game day based on available housing and jobs
 pub fn update_population(
     clock: Res<GameClock>,
     services: Res<CityServices>,
@@ -137,7 +137,7 @@ pub fn update_population(
     let housing_cap = services.housing_capacity.max(0);
     let job_cap = services.job_capacity.max(0);
 
-    // If there are no jobs at all, people gradually leave the city.
+    // If there are no jobs at all people gradually leave the city
     let max_population = if job_cap == 0 {
         0
     } else {
@@ -150,7 +150,7 @@ pub fn update_population(
         return;
     }
 
-    // Move population faster toward the target (about 40% of the gap per day).
+    // Move population faster toward the target (about 40% of the gap per day)
     let mut step = ((diff as f32) * 0.40).round() as i64;
     if step == 0 {
         step = diff.signum();
@@ -211,7 +211,7 @@ pub fn update_happiness_from_demands(
     }
 }
 
-/// Periodically abandon buildings based on happiness and service pressures.
+/// Periodically abandon buildings based on happiness and service pressures
 pub fn apply_abandonment(
     clock: Res<GameClock>,
     population: Res<CityPopulation>,
@@ -222,7 +222,7 @@ pub fn apply_abandonment(
     mut last_abandonment_day: Local<u32>,
 ) {
     const ABANDONMENT_INTERVAL_DAYS: u32 = 7;
-    // If people are reasonably happy, skip abandonment
+    // If people are reasonably happy skip abandonment
     const MIN_HAPPINESS_FOR_ABANDON: f32 = 0.5;
 
     if clock.day < *last_abandonment_day + ABANDONMENT_INTERVAL_DAYS {
@@ -250,7 +250,7 @@ pub fn apply_abandonment(
     let jobs_f = job_cap as f32;
     let pop_f = pop as f32;
     let employed = pop_f.min(jobs_f);
-    // Unhappy workers effectively "quit", reducing staffing.
+    // Unhappy workers effectively "quit", reducing staffing
     let effective_workers = employed * population.happiness.clamp(0.0, 1.0);
     let staffing_ratio = if jobs_f > 0.0 {
         effective_workers / jobs_f

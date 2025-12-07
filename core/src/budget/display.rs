@@ -4,7 +4,10 @@ use bevy::prelude::*;
 #[derive(Component)]
 pub struct BudgetDisplayText;
 
-pub fn setup_budget_display(mut commands: Commands) {
+pub fn setup_budget_display(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let font: Handle<Font> =
+        asset_server.load("fonts/Silkscreen/Silkscreen-Regular.ttf");
+
     commands.spawn((
         Text::new("Budget: $50,000"),
         Node {
@@ -15,6 +18,7 @@ pub fn setup_budget_display(mut commands: Commands) {
             ..default()
         },
         TextFont {
+            font,
             font_size: 20.0,
             ..default()
         },

@@ -4,7 +4,10 @@ use bevy::prelude::*;
 #[derive(Component)]
 pub struct TimeDisplayText;
 
-pub fn setup_time_display(mut commands: Commands) {
+pub fn setup_time_display(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let font: Handle<Font> =
+        asset_server.load("fonts/Silkscreen/Silkscreen-Regular.ttf");
+
     commands.spawn((
         Text::new("Day 1, 00:00:00 [NORMAL]"),
         Node {
@@ -15,6 +18,7 @@ pub fn setup_time_display(mut commands: Commands) {
             ..default()
         },
         TextFont {
+            font,
             font_size: 20.0,
             ..default()
         },
