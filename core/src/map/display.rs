@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use super::resources::{CurrentTileType, UiClickBlocker};
 use crate::budget::BuildingType;
+use crate::time::HelpOverlayState;
 
 type TileSelectInteractionQuery<'w, 's> = Query<
     'w,
@@ -44,7 +45,7 @@ pub fn setup_selected_tile_display(mut commands: Commands, asset_server: Res<Ass
         },))
         .with_children(|parent| {
             parent.spawn((
-                Text::new("Selected: Road (O)"),
+                Text::new("Selected: None"),
                 TextFont {
                     font,
                     font_size: 16.0,
@@ -166,7 +167,13 @@ pub fn handle_tile_select_button_presses(
     mut interaction_q: TileSelectInteractionQuery<'_, '_>,
     mut current_tile_type: ResMut<CurrentTileType>,
     mut ui_click_blocker: ResMut<UiClickBlocker>,
+    help_state: Option<Res<HelpOverlayState>>,
 ) {
+    if let Some(state) = help_state {
+        if state.active {
+            return;
+        }
+    }
     for (interaction, button) in interaction_q.iter_mut() {
         match *interaction {
             Interaction::Pressed => {

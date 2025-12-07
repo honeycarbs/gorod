@@ -44,7 +44,7 @@ pub fn setup_city_stats_display(mut commands: Commands, asset_server: Res<AssetS
                 .with_children(|card| {
                     // Title
                     card.spawn((
-                        Text::new("Population"),
+                        Text::new("Statistics"),
                         TextFont {
                             font: font.clone(),
                             font_size: 16.0,

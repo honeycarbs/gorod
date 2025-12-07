@@ -23,8 +23,7 @@ impl Default for CityPopulation {
     }
 }
 
-/// Describes how much housing, jobs and entertainment the city provides,
-/// and how much of each is currently demanded by the population
+/// Describes how much housing, jobs and entertainment the city provides
 #[derive(Resource, Debug, Default)]
 pub struct CityServices {
     pub housing_capacity: i64,
@@ -170,8 +169,6 @@ pub fn apply_demolition_happiness(
     }
 }
 
-// Maybe later I'll do a full path finding solution but now a building
-// is accessible if there is at least one road tile within a small radius
 fn is_accessible(
     center: &TilePos,
     tile_storage: &TileStorage,

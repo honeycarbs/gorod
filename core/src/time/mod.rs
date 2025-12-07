@@ -3,7 +3,7 @@ mod display;
 mod resources;
 mod systems;
 
-pub use resources::GameClock;
+pub use resources::{GameClock, HelpOverlayState};
 
 pub struct GameTimePlugin;
 
@@ -11,6 +11,7 @@ impl Plugin for GameTimePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<resources::GameTime>()
             .init_resource::<resources::GameClock>()
+            .init_resource::<resources::HelpOverlayState>()
             .add_systems(Startup, display::setup_time_display)
             .add_systems(
                 Update,
@@ -19,6 +20,7 @@ impl Plugin for GameTimePlugin {
                     systems::update_game_clock.after(systems::update_game_time),
                     systems::handle_time_speed_input,
                     display::update_time_display.after(systems::update_game_clock),
+                    display::handle_help_ui,
                 ),
             );
     }

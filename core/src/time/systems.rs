@@ -31,7 +31,14 @@ pub fn update_game_clock(game_time: Res<GameTime>, mut clock: ResMut<GameClock>)
 pub fn handle_time_speed_input(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut game_time: ResMut<GameTime>,
+    help_state: Option<Res<HelpOverlayState>>,
 ) {
+    if let Some(state) = help_state {
+        if state.active {
+            return;
+        }
+    }
+
     if keyboard.just_pressed(KeyCode::Space) {
         game_time.speed = if game_time.speed == TimeSpeed::Paused {
             TimeSpeed::Normal

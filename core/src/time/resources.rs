@@ -9,10 +9,19 @@ pub enum TimeSpeed {
     UltraFast,
 }
 
-#[derive(Resource, Default)]
+#[derive(Resource)]
 pub struct GameTime {
     pub elapsed_seconds: f64,
     pub speed: TimeSpeed,
+}
+
+impl Default for GameTime {
+    fn default() -> Self {
+        Self {
+            elapsed_seconds: 0.0,
+            speed: TimeSpeed::Paused,
+        }
+    }
 }
 
 #[derive(Resource, Default)]
@@ -21,4 +30,10 @@ pub struct GameClock {
     pub hour: u8,   // 0-23
     pub minute: u8, // 0-59
     pub second: u8, // 0-59
+}
+
+#[derive(Resource, Default)]
+pub struct HelpOverlayState {
+    pub active: bool,
+    pub previous_speed: Option<TimeSpeed>,
 }

@@ -2,6 +2,7 @@ use super::helpers::*;
 use super::placeable_area::incremental_update_placeable_area;
 use super::resources::*;
 use crate::budget::{BuildingDemolished, BuildingType};
+use crate::time::HelpOverlayState;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
@@ -46,7 +47,13 @@ pub fn demolish_tile_on_click(
     mut demolished_writer: MessageWriter<BuildingDemolished>,
     mut commands: Commands,
     building_sprites_q: BuildingSpritesQuery<'_, '_>,
+    help_state: Option<Res<HelpOverlayState>>,
 ) {
+    if let Some(state) = help_state {
+        if state.active {
+            return;
+        }
+    }
     if !inputs.mouse_button.just_pressed(MouseButton::Left) {
         return;
     }

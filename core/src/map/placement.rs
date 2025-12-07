@@ -6,12 +6,14 @@ use super::events::*;
 use super::helpers::*;
 use super::resources::*;
 use crate::budget::{Budget, BuildingPlaced, BuildingType, TransactionFailed};
+use crate::time::HelpOverlayState;
 
 pub fn collect_placement_intents(
     mouse_button: Res<ButtonInput<MouseButton>>,
     cursor_pos: Res<CursorWorldPos>,
     current_tile_type: Res<CurrentTileType>,
     ui_click_blocker: Res<UiClickBlocker>,
+    help_state: Option<Res<HelpOverlayState>>,
     tilemap_q: Query<(
         &TilemapSize,
         &TilemapGridSize,
@@ -22,6 +24,12 @@ pub fn collect_placement_intents(
     )>,
     mut intent_writer: MessageWriter<PlacementIntent>,
 ) {
+    if let Some(state) = help_state {
+        if state.active {
+            return;
+        }
+    }
+
     if !mouse_button.just_pressed(MouseButton::Left) {
         return;
     }
@@ -222,8 +230,17 @@ pub fn change_tile_type(
     mut current_industry_variant: ResMut<CurrentIndustryVariant>,
     mut current_road_variant: ResMut<CurrentRoadVariant>,
     road_atlas: Option<Res<RoadAtlas>>,
+    help_state: Option<Res<HelpOverlayState>>,
 ) {
-    if keyboard.just_pressed(KeyCode::KeyR) {
+    if let Some(state) = help_state {
+        if state.active {
+            return;
+        }
+    }
+    if keyboard.just_pressed(KeyCode::Escape) {
+        current_tile_type.texture_index = 0;
+        info!("Selected: None");
+    } else if keyboard.just_pressed(KeyCode::KeyR) {
         current_tile_type.texture_index = 2;
         info!("Selected: Residential/Housing");
     } else if keyboard.just_pressed(KeyCode::KeyC) {

@@ -26,7 +26,7 @@ pub struct CurrentTileType {
 impl Default for CurrentTileType {
     fn default() -> Self {
         Self {
-            texture_index: 5, // Road by default
+            texture_index: 0,
         }
     }
 }
@@ -101,9 +101,6 @@ pub const INDUSTRY_VARIANT_COUNT: usize = 2;
 pub const ROAD_VARIANT_COUNT: usize = 11;
 
 /// Number of tile variants in the `tiles.png` sprite sheet used for previews
-///
-/// This should be at least large enough to cover the indices used for
-/// buildings (2, 3, 4, 5, 6). Update this if you expand the tilesheet
 pub const TILE_PREVIEW_VARIANT_COUNT: usize = 7;
 
 #[derive(Resource)]
