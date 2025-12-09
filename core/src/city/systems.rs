@@ -5,6 +5,7 @@ use crate::budget::{BuildingDemolished, BuildingPlaced, BuildingType};
 use crate::map::{
     ABANDONED_TEXTURE_INDEX, CommercialBuilding, IndustryBuilding, ResidentialBuilding,
 };
+use crate::spatial::{SpatialGrid, sync_spatial_grid_on_demolition, sync_spatial_grid_on_placement};
 use crate::time::GameClock;
 
 use super::display::{setup_city_stats_display, update_city_stats_display};
@@ -20,13 +21,17 @@ impl Plugin for SimulationPlugin {
         app.init_resource::<CityPopulation>()
             .init_resource::<CityServices>()
             .init_resource::<CityInfrastructure>()
+            .init_resource::<SpatialGrid>()
             .add_systems(Startup, setup_city_stats_display)
             .add_systems(
                 Update,
                 (
+                    sync_spatial_grid_on_placement,
+                    sync_spatial_grid_on_demolition,
                     update_capacities_from_building_events,
                     update_infrastructure_from_building_events,
-                ),
+                )
+                    .chain(),
             )
             .add_systems(Update, update_population)
             .add_systems(Update, (update_demands, update_happiness_from_demands))

@@ -2,6 +2,7 @@ use super::helpers::*;
 use super::placeable_area::incremental_update_placeable_area;
 use super::resources::*;
 use crate::budget::{BuildingDemolished, BuildingType};
+use crate::spatial::SpatialGrid;
 use crate::time::HelpOverlayState;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
@@ -44,6 +45,7 @@ pub struct DemolitionInputs<'w, 's> {
 pub fn demolish_tile_on_click(
     mut inputs: DemolitionInputs,
     mut placeable_map: ResMut<PlaceableMap>,
+    spatial_grid: Res<SpatialGrid>,
     mut demolished_writer: MessageWriter<BuildingDemolished>,
     mut commands: Commands,
     building_sprites_q: BuildingSpritesQuery<'_, '_>,
@@ -96,12 +98,7 @@ pub fn demolish_tile_on_click(
                     return;
                 }
 
-                let should_be_placeable = is_within_range_of_placed_tile(
-                    &tile_pos,
-                    tile_storage,
-                    &inputs.tile_texture_q,
-                    map_size,
-                );
+                let should_be_placeable = is_within_range_of_placed_tile(&tile_pos, &spatial_grid);
 
                 if let Ok(mut texture_index) = inputs.tile_texture_q.get_mut(tile_entity) {
                     if should_be_placeable {
@@ -123,6 +120,7 @@ pub fn demolish_tile_on_click(
                     incremental_update_placeable_area(
                         tile_pos,
                         &mut placeable_map,
+                        &spatial_grid,
                         tile_storage,
                         &inputs.tile_texture_q,
                         map_size,

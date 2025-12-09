@@ -5,6 +5,7 @@ mod budget;
 mod camera;
 mod city;
 mod map;
+mod spatial;
 mod time;
 
 fn main() {

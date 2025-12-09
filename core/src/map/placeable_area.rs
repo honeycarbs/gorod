@@ -3,48 +3,47 @@ use super::resources::*;
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 
+use crate::spatial::SpatialGrid;
+
+const PLACEABLE_EXPANSION_RADIUS: i32 = 2;
+
 pub fn expand_placeable_area(
     mut placeable_map: ResMut<PlaceableMap>,
-    tile_storage_q: Query<&TileStorage, With<TilemapSize>>,
-    tile_texture_q: Query<&TileTextureIndex>,
+    spatial_grid: Res<SpatialGrid>,
     tilemap_size_q: Query<&TilemapSize>,
 ) {
-    let Some(tile_storage) = tile_storage_q.iter().next() else {
-        return;
-    };
     let Some(map_size) = tilemap_size_q.iter().next() else {
         return;
     };
 
+    let buildings = spatial_grid.buildings_in_radius(
+        &TilePos {
+            x: map_size.x / 2,
+            y: map_size.y / 2,
+        },
+        map_size.x.max(map_size.y) as i32,
+    );
+
     let mut newly_placeable = Vec::new();
 
-    for x in 0..map_size.x {
-        for y in 0..map_size.y {
-            let tile_pos = TilePos { x, y };
+    for building_pos in buildings {
+        for dx in -PLACEABLE_EXPANSION_RADIUS..=PLACEABLE_EXPANSION_RADIUS {
+            for dy in -PLACEABLE_EXPANSION_RADIUS..=PLACEABLE_EXPANSION_RADIUS {
+                if dx == 0 && dy == 0 {
+                    continue;
+                }
 
-            if let Some(tile_entity) = tile_storage.get(&tile_pos)
-                && let Ok(texture) = tile_texture_q.get(tile_entity)
-                && texture.0 >= 2
-            {
-                for dx in -2..=2 {
-                    for dy in -2..=2 {
-                        if dx == 0 && dy == 0 {
-                            continue;
-                        }
+                let nx = building_pos.x as i32 + dx;
+                let ny = building_pos.y as i32 + dy;
 
-                        let nx = x as i32 + dx;
-                        let ny = y as i32 + dy;
+                if nx >= 0 && nx < map_size.x as i32 && ny >= 0 && ny < map_size.y as i32 {
+                    let neighbor_pos = TilePos {
+                        x: nx as u32,
+                        y: ny as u32,
+                    };
 
-                        if nx >= 0 && nx < map_size.x as i32 && ny >= 0 && ny < map_size.y as i32 {
-                            let neighbor_pos = TilePos {
-                                x: nx as u32,
-                                y: ny as u32,
-                            };
-
-                            if !placeable_map.is_placeable(&neighbor_pos) {
-                                newly_placeable.push(neighbor_pos);
-                            }
-                        }
+                    if !placeable_map.is_placeable(&neighbor_pos) {
+                        newly_placeable.push(neighbor_pos);
                     }
                 }
             }
@@ -96,15 +95,18 @@ pub fn update_placeable_indicators(
     }
 }
 
+const INCREMENTAL_UPDATE_RADIUS: i32 = 4;
+
 pub fn incremental_update_placeable_area(
     demolished_pos: TilePos,
     placeable_map: &mut PlaceableMap,
+    spatial_grid: &SpatialGrid,
     tile_storage: &TileStorage,
     tile_texture_q: &Query<&mut TileTextureIndex>,
     map_size: &TilemapSize,
 ) {
-    for dx in -4..=4 {
-        for dy in -4..=4 {
+    for dx in -INCREMENTAL_UPDATE_RADIUS..=INCREMENTAL_UPDATE_RADIUS {
+        for dy in -INCREMENTAL_UPDATE_RADIUS..=INCREMENTAL_UPDATE_RADIUS {
             let nx = demolished_pos.x as i32 + dx;
             let ny = demolished_pos.y as i32 + dy;
 
@@ -121,12 +123,7 @@ pub fn incremental_update_placeable_area(
                         continue;
                     }
 
-                    let should_be_placeable = is_within_range_of_placed_tile(
-                        &check_pos,
-                        tile_storage,
-                        tile_texture_q,
-                        map_size,
-                    );
+                    let should_be_placeable = is_within_range_of_placed_tile(&check_pos, spatial_grid);
 
                     if should_be_placeable {
                         placeable_map.mark_placeable(check_pos);

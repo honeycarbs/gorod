@@ -1,7 +1,8 @@
 use bevy::prelude::*;
-use bevy_ecs_tilemap::prelude::{TilePos, TileStorage, TileTextureIndex, TilemapSize};
+use bevy_ecs_tilemap::prelude::TilePos;
 
 use crate::budget::{BuildingDemolished, BuildingPlaced, BuildingType};
+use crate::spatial::SpatialGrid;
 
 const RESIDENTIAL_NEIGHBOR_RADIUS: i32 = 3;
 const ROAD_NEIGHBOR_RADIUS: i32 = 4;
@@ -78,61 +79,18 @@ pub fn building_contribution(building_type: BuildingType) -> BuildingContributio
     }
 }
 
-fn count_nearby_residential(
-    center: &TilePos,
-    tile_storage: &TileStorage,
-    tile_texture_q: &Query<&TileTextureIndex>,
-    map_size: &TilemapSize,
-) -> u32 {
-    let mut count = 0;
-
-    for dx in -RESIDENTIAL_NEIGHBOR_RADIUS..=RESIDENTIAL_NEIGHBOR_RADIUS {
-        for dy in -RESIDENTIAL_NEIGHBOR_RADIUS..=RESIDENTIAL_NEIGHBOR_RADIUS {
-            if dx == 0 && dy == 0 {
-                continue;
-            }
-
-            let nx = center.x as i32 + dx;
-            let ny = center.y as i32 + dy;
-
-            if nx < 0 || ny < 0 || nx >= map_size.x as i32 || ny >= map_size.y as i32 {
-                continue;
-            }
-
-            let neighbor_pos = TilePos {
-                x: nx as u32,
-                y: ny as u32,
-            };
-
-            if let Some(entity) = tile_storage.get(&neighbor_pos)
-                && let Ok(texture) = tile_texture_q.get(entity)
-                && let Some(btype) = BuildingType::from_texture_index(texture.0)
-                && matches!(btype, BuildingType::Residential)
-            {
-                count += 1;
-            }
-        }
-    }
-
-    count
+fn count_nearby_residential(center: &TilePos, spatial_grid: &SpatialGrid) -> u32 {
+    spatial_grid.count_residential_in_radius(center, RESIDENTIAL_NEIGHBOR_RADIUS)
 }
 
 pub fn apply_demolition_happiness(
     mut population: ResMut<CityPopulation>,
     services: Res<CityServices>,
+    spatial_grid: Res<SpatialGrid>,
     mut demolished_reader: MessageReader<BuildingDemolished>,
-    tile_storage_q: Query<(&TileStorage, &TilemapSize)>,
-    tile_texture_q: Query<&TileTextureIndex>,
 ) {
-    let (tile_storage, map_size) = if let Some(v) = tile_storage_q.iter().next() {
-        v
-    } else {
-        return;
-    };
-
     for event in demolished_reader.read() {
-        let nearby_residential =
-            count_nearby_residential(&event.tile_pos, tile_storage, &tile_texture_q, map_size);
+        let nearby_residential = count_nearby_residential(&event.tile_pos, &spatial_grid);
 
         let pop = population.population.max(1) as f32;
         let housing_need = (services.housing_demand.max(0) as f32 / pop).clamp(0.0, 1.0);
@@ -171,65 +129,22 @@ pub fn apply_demolition_happiness(
     }
 }
 
-fn is_accessible(
-    center: &TilePos,
-    tile_storage: &TileStorage,
-    tile_texture_q: &Query<&TileTextureIndex>,
-    map_size: &TilemapSize,
-) -> bool {
-    for dx in -ROAD_NEIGHBOR_RADIUS..=ROAD_NEIGHBOR_RADIUS {
-        for dy in -ROAD_NEIGHBOR_RADIUS..=ROAD_NEIGHBOR_RADIUS {
-            if dx == 0 && dy == 0 {
-                continue;
-            }
-
-            let nx = center.x as i32 + dx;
-            let ny = center.y as i32 + dy;
-
-            if nx < 0 || ny < 0 || nx >= map_size.x as i32 || ny >= map_size.y as i32 {
-                continue;
-            }
-
-            let neighbor_pos = TilePos {
-                x: nx as u32,
-                y: ny as u32,
-            };
-
-            if let Some(entity) = tile_storage.get(&neighbor_pos)
-                && let Ok(texture) = tile_texture_q.get(entity)
-                && matches!(
-                    BuildingType::from_texture_index(texture.0),
-                    Some(BuildingType::Road)
-                )
-            {
-                return true;
-            }
-        }
-    }
-
-    false
+fn is_accessible(center: &TilePos, spatial_grid: &SpatialGrid) -> bool {
+    spatial_grid.has_road_in_radius(center, ROAD_NEIGHBOR_RADIUS)
 }
 
 pub fn apply_placement_happiness(
     mut population: ResMut<CityPopulation>,
     services: Res<CityServices>,
+    spatial_grid: Res<SpatialGrid>,
     mut placed_reader: MessageReader<BuildingPlaced>,
-    tile_storage_q: Query<(&TileStorage, &TilemapSize)>,
-    tile_texture_q: Query<&TileTextureIndex>,
 ) {
-    let (tile_storage, map_size) = if let Some(v) = tile_storage_q.iter().next() {
-        v
-    } else {
-        return;
-    };
-
     for event in placed_reader.read() {
-        if !is_accessible(&event.tile_pos, tile_storage, &tile_texture_q, map_size) {
+        if !is_accessible(&event.tile_pos, &spatial_grid) {
             continue;
         }
 
-        let nearby_residential =
-            count_nearby_residential(&event.tile_pos, tile_storage, &tile_texture_q, map_size);
+        let nearby_residential = count_nearby_residential(&event.tile_pos, &spatial_grid);
 
         let pop = population.population.max(1) as f32;
         let housing_need = (services.housing_demand.max(0) as f32 / pop).clamp(0.0, 1.0);
