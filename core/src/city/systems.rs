@@ -137,7 +137,6 @@ pub fn update_population(
     *last_processed_day = clock.day;
 
     let housing_cap = services.housing_capacity.max(0);
-    let job_cap = services.job_capacity.max(0);
 
     // Population is primarily limited by housing
     // If there are no jobs at all people gradually leave the city
@@ -149,11 +148,11 @@ pub fn update_population(
         return;
     }
 
-    // Move population faster toward the target (about 70% of the gap per day)
-    let mut step = ((diff as f32) * 0.70).round() as i64;
+    let mut step = ((diff as f32) * 0.35).round() as i64;
     if step == 0 {
         step = diff.signum();
     }
+    step = step.clamp(-5, 5);
 
     let old_pop = population.population;
     population.population += step;
@@ -233,8 +232,7 @@ pub fn update_happiness_from_demands(
     }
 
     let target_happiness = (1.0 - pressure).clamp(0.0, 1.0);
-    // Ease 25% of the way toward the target per in‑game day
-    let new_happiness = old_happiness + (target_happiness - old_happiness) * 0.25;
+    let new_happiness = old_happiness + (target_happiness - old_happiness) * 0.375;
     population.happiness = new_happiness.clamp(0.0, 1.0);
 
     if new_happiness + 1e-4 < old_happiness {

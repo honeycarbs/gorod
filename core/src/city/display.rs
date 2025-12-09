@@ -116,23 +116,64 @@ pub fn setup_city_stats_display(mut commands: Commands, asset_server: Res<AssetS
 pub fn update_city_stats_display(
     population: Res<CityPopulation>,
     services: Res<CityServices>,
-    mut stats_q: Query<(&mut Text, &CityStatKind)>,
+    mut stats_q: Query<(&mut Text, &mut TextColor, &CityStatKind)>,
 ) {
     if !population.is_changed() && !services.is_changed() {
         return;
     }
 
-    for (mut text, kind) in stats_q.iter_mut() {
-        text.0 = match kind {
-            CityStatKind::Pop => format!("Population: {}", population.population),
-            CityStatKind::Housing => format!("Housing: {}", services.housing_capacity),
-            CityStatKind::Jobs => format!("Jobs: {}", services.job_capacity),
-            CityStatKind::Happy => format!("Happiness: {:.2}", population.happiness),
-            CityStatKind::HousingDemand => format!("Housing: {}", services.housing_demand),
-            CityStatKind::JobDemand => format!("Jobs: {}", services.job_demand),
-            CityStatKind::EntertainmentDemand => {
-                format!("Entertainment: {}", services.entertainment_demand)
+    let pop = population.population.max(1) as f32;
+
+    for (mut text, mut color, kind) in stats_q.iter_mut() {
+        match kind {
+            CityStatKind::Pop => {
+                text.0 = format!("Population: {}", population.population);
             }
-        };
+            CityStatKind::Housing => {
+                text.0 = format!("Housing: {}", services.housing_capacity);
+            }
+            CityStatKind::Jobs => {
+                text.0 = format!("Jobs: {}", services.job_capacity);
+            }
+            CityStatKind::Happy => {
+                text.0 = format!("Happiness: {:.2}", population.happiness);
+            }
+            CityStatKind::HousingDemand => {
+                let demand = services.housing_demand;
+                text.0 = format!("Housing: {}", demand);
+                let demand_ratio = if pop > 0.0 { demand as f32 / pop } else { 0.0 };
+                *color = if demand_ratio > 0.2 {
+                    TextColor(Color::srgb(1.0, 0.3, 0.3))
+                } else if demand_ratio > 0.1 {
+                    TextColor(Color::srgb(1.0, 0.8, 0.3))
+                } else {
+                    TextColor(Color::WHITE)
+                };
+            }
+            CityStatKind::JobDemand => {
+                let demand = services.job_demand;
+                text.0 = format!("Jobs: {}", demand);
+                let demand_ratio = if pop > 0.0 { demand as f32 / pop } else { 0.0 };
+                *color = if demand_ratio > 0.2 {
+                    TextColor(Color::srgb(1.0, 0.3, 0.3))
+                } else if demand_ratio > 0.1 {
+                    TextColor(Color::srgb(1.0, 0.8, 0.3))
+                } else {
+                    TextColor(Color::WHITE)
+                };
+            }
+            CityStatKind::EntertainmentDemand => {
+                let demand = services.entertainment_demand;
+                text.0 = format!("Entertainment: {}", demand);
+                let demand_ratio = if pop > 0.0 { demand as f32 / pop } else { 0.0 };
+                *color = if demand_ratio > 0.2 {
+                    TextColor(Color::srgb(1.0, 0.3, 0.3))
+                } else if demand_ratio > 0.1 {
+                    TextColor(Color::srgb(1.0, 0.8, 0.3))
+                } else {
+                    TextColor(Color::WHITE)
+                };
+            }
+        }
     }
 }
