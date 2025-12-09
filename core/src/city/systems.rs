@@ -177,10 +177,9 @@ pub fn update_demands(mut services: ResMut<CityServices>, population: Res<CityPo
     let mut happy_growth_bonus: i64 = 0;
     if pop > 0 && population.happiness >= 0.95 {
         // Scale bonus with population and how close we are to 1.0 happiness.
-        // Roughly: at 1.0 happiness, each 100 citizens add ~1 extra unit of demand.
+        // Roughly: at 1.0 happiness, about 5% of the population is added as extra demand
         let happiness_factor = ((population.happiness - 0.95) / 0.05).clamp(0.0, 1.0);
-        happy_growth_bonus =
-            ((pop as f32 / 100.0) * happiness_factor).ceil() as i64;
+        happy_growth_bonus = ((pop as f32 * 0.05) * happiness_factor).ceil() as i64;
     }
 
     services.housing_demand =
