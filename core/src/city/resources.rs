@@ -134,8 +134,11 @@ pub fn apply_demolition_happiness(
         let nearby_residential =
             count_nearby_residential(&event.tile_pos, tile_storage, &tile_texture_q, map_size);
 
+        let pop = population.population.max(1) as f32;
+        let housing_need = (services.housing_demand.max(0) as f32 / pop).clamp(0.0, 1.0);
+
         let mut delta = match event.building_type {
-            BuildingType::Residential => -0.03,
+            BuildingType::Residential => -0.03 * housing_need.max(0.1),
             BuildingType::Commercial => -0.02 * nearby_residential as f32,
             BuildingType::Industry => {
                 let positive = 0.005 * nearby_residential as f32;
@@ -245,8 +248,9 @@ pub fn apply_placement_happiness(
 
                 let positive = 0.01 * job_need * (jobs_gained / 10.0);
                 let negative = -0.005 * nearby_residential as f32;
+                let isolation_penalty = if nearby_residential == 0 { -0.01 } else { 0.0 };
 
-                positive + negative
+                positive + negative + isolation_penalty
             }
             BuildingType::Road => {
                 let base = 0.003 * nearby_residential as f32;
