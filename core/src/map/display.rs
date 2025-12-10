@@ -158,10 +158,10 @@ pub fn handle_tile_select_button_presses(
     mut ui_click_blocker: ResMut<UiClickBlocker>,
     help_state: Option<Res<HelpOverlayState>>,
 ) {
-    if let Some(state) = help_state {
-        if state.active {
-            return;
-        }
+    if let Some(state) = help_state
+        && state.active
+    {
+        return;
     }
     for (interaction, button) in interaction_q.iter_mut() {
         match *interaction {

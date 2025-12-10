@@ -1,3 +1,4 @@
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::{TileStorage, TileTextureIndex, TilemapSize};
 
@@ -310,56 +311,65 @@ pub fn update_happiness_from_demands(
     }
 }
 
+type AbandonmentBuildingQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        Option<&'static ResidentialBuilding>,
+        Option<&'static CommercialBuilding>,
+        Option<&'static IndustryBuilding>,
+    ),
+>;
+
+#[derive(SystemParam)]
+pub struct AbandonmentInputs<'w, 's> {
+    clock: Res<'w, GameClock>,
+    population: Res<'w, CityPopulation>,
+    services: Res<'w, CityServices>,
+    tile_storage_q: Query<'w, 's, (&'static TileStorage, &'static TilemapSize)>,
+    tile_texture_q: Query<'w, 's, &'static mut TileTextureIndex>,
+    demolished_writer: MessageWriter<'w, BuildingDemolished>,
+    commands: Commands<'w, 's>,
+    building_sprites_q: AbandonmentBuildingQuery<'w, 's>,
+}
+
 /// Periodically abandon buildings based on happiness and service pressures
 pub fn apply_abandonment(
-    clock: Res<GameClock>,
-    population: Res<CityPopulation>,
-    services: Res<CityServices>,
-    tile_storage_q: Query<(&TileStorage, &TilemapSize)>,
-    mut tile_texture_q: Query<&mut TileTextureIndex>,
-    mut demolished_writer: MessageWriter<BuildingDemolished>,
+    mut inputs: AbandonmentInputs,
     mut last_abandonment_day: Local<u32>,
-    mut commands: Commands,
-    building_sprites_q: Query<
-        (
-            Entity,
-            Option<&'static ResidentialBuilding>,
-            Option<&'static CommercialBuilding>,
-            Option<&'static IndustryBuilding>,
-        ),
-    >,
 ) {
     const ABANDONMENT_INTERVAL_DAYS: u32 = 3;
     // If people are reasonably happy skip abandonment
     const MIN_HAPPINESS_FOR_ABANDON: f32 = 0.7;
 
-    if clock.day < *last_abandonment_day + ABANDONMENT_INTERVAL_DAYS {
+    if inputs.clock.day < *last_abandonment_day + ABANDONMENT_INTERVAL_DAYS {
         return;
     }
-    *last_abandonment_day = clock.day;
+    *last_abandonment_day = inputs.clock.day;
 
-    let (tile_storage, _) = if let Some(v) = tile_storage_q.iter().next() {
+    let (tile_storage, _) = if let Some(v) = inputs.tile_storage_q.iter().next() {
         v
     } else {
         return;
     };
 
-    let pop = population.population.max(0);
+    let pop = inputs.population.population.max(0);
     if pop == 0 {
         return;
     }
-    if population.happiness >= MIN_HAPPINESS_FOR_ABANDON {
+    if inputs.population.happiness >= MIN_HAPPINESS_FOR_ABANDON {
         return;
     }
 
-    let housing_shortage = services.housing_demand > 0;
+    let housing_shortage = inputs.services.housing_demand > 0;
 
-    let job_cap = services.job_capacity.max(0);
+    let job_cap = inputs.services.job_capacity.max(0);
     let jobs_f = job_cap as f32;
     let pop_f = pop as f32;
     let employed = pop_f.min(jobs_f);
     // Unhappy workers effectively "quit", reducing staffing
-    let effective_workers = employed * population.happiness.clamp(0.0, 1.0);
+    let effective_workers = employed * inputs.population.happiness.clamp(0.0, 1.0);
     let staffing_ratio = if jobs_f > 0.0 {
         effective_workers / jobs_f
     } else {
@@ -374,8 +384,8 @@ pub fn apply_abandonment(
     info!(
         "Abandonment tick: pop={}, happiness={:.2}, housing_demand={}, job_capacity={}, effective_workers={:.1}, staffing_ratio={:.2}",
         pop,
-        population.happiness,
-        services.housing_demand,
+        inputs.population.happiness,
+        inputs.services.housing_demand,
         job_cap,
         effective_workers,
         staffing_ratio
@@ -387,7 +397,7 @@ pub fn apply_abandonment(
     if residential_to_abandon > 0 {
         let mut remaining = residential_to_abandon;
 
-        for (entity, residential, _commercial, _industry) in building_sprites_q.iter() {
+        for (entity, residential, _commercial, _industry) in inputs.building_sprites_q.iter() {
             if remaining == 0 {
                 break;
             }
@@ -395,15 +405,15 @@ pub fn apply_abandonment(
             if let Some(building) = residential {
                 let pos = building.tile_pos;
                 if let Some(tile_entity) = tile_storage.get(&pos)
-                    && let Ok(mut texture) = tile_texture_q.get_mut(tile_entity)
+                    && let Ok(mut texture) = inputs.tile_texture_q.get_mut(tile_entity)
                 {
                     texture.0 = ABANDONED_TEXTURE_INDEX;
                     info!("Abandoned residential at {:?}", pos);
-                    demolished_writer.write(BuildingDemolished {
+                    inputs.demolished_writer.write(BuildingDemolished {
                         building_type: BuildingType::Residential,
                         tile_pos: pos,
                     });
-                    commands.entity(entity).despawn();
+                    inputs.commands.entity(entity).despawn();
                     remaining -= 1;
                 }
             }
@@ -414,7 +424,7 @@ pub fn apply_abandonment(
     if job_capacity_to_remove > 0 {
         let mut remaining_jobs = job_capacity_to_remove;
 
-        for (entity, _residential, commercial, industry) in building_sprites_q.iter() {
+        for (entity, _residential, commercial, industry) in inputs.building_sprites_q.iter() {
             if remaining_jobs <= 0 {
                 break;
             }
@@ -433,15 +443,15 @@ pub fn apply_abandonment(
             }
 
             if let Some(tile_entity) = tile_storage.get(&pos)
-                && let Ok(mut texture) = tile_texture_q.get_mut(tile_entity)
+                && let Ok(mut texture) = inputs.tile_texture_q.get_mut(tile_entity)
             {
                 texture.0 = ABANDONED_TEXTURE_INDEX;
                 info!("Abandoned {:?} at {:?}", btype, pos);
-                demolished_writer.write(BuildingDemolished {
+                inputs.demolished_writer.write(BuildingDemolished {
                     building_type: btype,
                     tile_pos: pos,
                 });
-                commands.entity(entity).despawn();
+                inputs.commands.entity(entity).despawn();
                 remaining_jobs -= contrib.jobs;
             }
         }

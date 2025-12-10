@@ -33,10 +33,10 @@ pub fn handle_time_speed_input(
     mut game_time: ResMut<GameTime>,
     help_state: Option<Res<HelpOverlayState>>,
 ) {
-    if let Some(state) = help_state {
-        if state.active {
-            return;
-        }
+    if let Some(state) = help_state
+        && state.active
+    {
+        return;
     }
 
     if keyboard.just_pressed(KeyCode::Space) {

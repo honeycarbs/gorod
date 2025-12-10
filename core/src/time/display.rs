@@ -298,24 +298,32 @@ pub fn update_time_display(
     };
 }
 
+type HelpVisibilityQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        &'static mut Visibility,
+        Option<&'static HelpOverlay>,
+        Option<&'static HelpPageOne>,
+        Option<&'static HelpPageTwo>,
+    ),
+>;
+
+type HelpButtonQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        &'static Interaction,
+        Option<&'static HelpButton>,
+        Option<&'static HelpNextButton>,
+        Option<&'static HelpCloseButton>,
+    ),
+    (Changed<Interaction>, With<Button>),
+>;
+
 pub fn handle_help_ui(
-    mut vis_q: Query<
-        (
-            &mut Visibility,
-            Option<&HelpOverlay>,
-            Option<&HelpPageOne>,
-            Option<&HelpPageTwo>,
-        ),
-    >,
-    mut button_q: Query<
-        (
-            &Interaction,
-            Option<&HelpButton>,
-            Option<&HelpNextButton>,
-            Option<&HelpCloseButton>,
-        ),
-        (Changed<Interaction>, With<Button>),
-    >,
+    mut vis_q: HelpVisibilityQuery<'_, '_>,
+    mut button_q: HelpButtonQuery<'_, '_>,
     mut game_time: ResMut<GameTime>,
     mut help_state: ResMut<HelpOverlayState>,
     mut current_tile_type: Option<ResMut<crate::map::CurrentTileType>>,
@@ -368,9 +376,7 @@ pub fn handle_help_ui(
     // Apply visibility changes based on which button was pressed this frame.
     if show_first_page {
         for (mut vis, overlay, page_one, page_two) in vis_q.iter_mut() {
-            if overlay.is_some() {
-                *vis = Visibility::Visible;
-            } else if page_one.is_some() {
+            if overlay.is_some() || page_one.is_some() {
                 *vis = Visibility::Visible;
             } else if page_two.is_some() {
                 *vis = Visibility::Hidden;

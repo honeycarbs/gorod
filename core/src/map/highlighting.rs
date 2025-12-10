@@ -1,6 +1,7 @@
 use super::helpers::*;
 use super::resources::*;
 use crate::budget::BuildingType;
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 use bevy_image::TextureAtlas;
@@ -50,39 +51,57 @@ pub fn highlight_hovered_tile(
     }
 }
 
+#[derive(SystemParam)]
+pub struct HoverPreviewInputs<'w, 's> {
+    commands: Commands<'w, 's>,
+    cursor_pos: Res<'w, CursorWorldPos>,
+    current_tile_type: Res<'w, CurrentTileType>,
+    variants: HoverPreviewVariantResources<'w>,
+    atlases: HoverPreviewAtlasResources<'w>,
+    tilemap_q: Query<
+        'w,
+        's,
+        (
+            &'static TilemapSize,
+            &'static TilemapGridSize,
+            &'static TilemapTileSize,
+            &'static TilemapType,
+            &'static TileStorage,
+            &'static Transform,
+            &'static TilemapAnchor,
+        ),
+    >,
+    preview_q: Query<'w, 's, Entity, (With<RoadHoverPreview>,)>,
+}
+
+#[derive(SystemParam)]
+pub struct HoverPreviewVariantResources<'w> {
+    road: Res<'w, CurrentRoadVariant>,
+    preview: ResMut<'w, PreviewVariant>,
+    decorative: Res<'w, CurrentDecorativeVariant>,
+}
+
+#[derive(SystemParam)]
+pub struct HoverPreviewAtlasResources<'w> {
+    road: Option<Res<'w, RoadAtlas>>,
+    residential: Option<Res<'w, ResidentialBuildingAtlas>>,
+    commercial: Option<Res<'w, CommercialBuildingAtlas>>,
+    industry: Option<Res<'w, IndustryBuildingAtlas>>,
+    decorative: Option<Res<'w, DecorativeBuildingAtlas>>,
+    tile_preview: Option<Res<'w, TilePreviewAtlas>>,
+}
+
 /// Show a semi-transparent preview of the currently selected building under the cursor
-#[allow(clippy::too_many_arguments)]
 pub fn update_road_hover_preview(
-    mut commands: Commands,
-    cursor_pos: Res<CursorWorldPos>,
-    current_tile_type: Res<CurrentTileType>,
-    current_road_variant: Res<CurrentRoadVariant>,
-    mut preview_variant: ResMut<PreviewVariant>,
-    road_atlas: Option<Res<RoadAtlas>>,
-    residential_atlas: Option<Res<ResidentialBuildingAtlas>>,
-    commercial_atlas: Option<Res<CommercialBuildingAtlas>>,
-    industry_atlas: Option<Res<IndustryBuildingAtlas>>,
-    decorative_atlas: Option<Res<DecorativeBuildingAtlas>>,
-    current_decorative_variant: Res<CurrentDecorativeVariant>,
-    tile_preview_atlas: Option<Res<TilePreviewAtlas>>,
-    tilemap_q: Query<(
-        &TilemapSize,
-        &TilemapGridSize,
-        &TilemapTileSize,
-        &TilemapType,
-        &TileStorage,
-        &Transform,
-        &TilemapAnchor,
-    )>,
-    preview_q: Query<Entity, With<RoadHoverPreview>>,
+    mut inputs: HoverPreviewInputs,
     mut cached_tile: Local<Option<(TilePos, BuildingType)>>,
 ) {
     // Only show preview while some building type is active
-    let active_type = BuildingType::from_selection_index(current_tile_type.texture_index);
+    let active_type = BuildingType::from_selection_index(inputs.current_tile_type.texture_index);
 
     if active_type.is_none() {
-        for entity in preview_q.iter() {
-            commands.entity(entity).despawn();
+        for entity in inputs.preview_q.iter() {
+            inputs.commands.entity(entity).despawn();
         }
         *cached_tile = None;
         return;
@@ -92,9 +111,9 @@ pub fn update_road_hover_preview(
     let mut target_world_and_grid: Option<(Vec3, Vec2, TilePos)> = None;
 
     for (map_size, grid_size, tile_size, map_type, _tile_storage, map_transform, anchor) in
-        tilemap_q.iter()
+        inputs.tilemap_q.iter()
     {
-        let cursor_in_map_pos = cursor_to_map_pos(cursor_pos.0, map_transform);
+        let cursor_in_map_pos = cursor_to_map_pos(inputs.cursor_pos.0, map_transform);
 
         if let Some(tile_pos) = TilePos::from_world_pos(
             &cursor_in_map_pos,
@@ -112,8 +131,8 @@ pub fn update_road_hover_preview(
     }
 
     let Some((world_pos, _cell_size, tile_pos)) = target_world_and_grid else {
-        for entity in preview_q.iter() {
-            commands.entity(entity).despawn();
+        for entity in inputs.preview_q.iter() {
+            inputs.commands.entity(entity).despawn();
         }
         *cached_tile = None;
         return;
@@ -130,18 +149,18 @@ pub fn update_road_hover_preview(
         .unwrap_or(true);
 
     // Clear any existing preview entity (there should be at most one)
-    for entity in preview_q.iter() {
-        commands.entity(entity).despawn();
+    for entity in inputs.preview_q.iter() {
+        inputs.commands.entity(entity).despawn();
     }
 
     match active_type {
         BuildingType::Road => {
-            let Some(road_atlas) = road_atlas else {
+            let Some(road_atlas) = inputs.atlases.road.as_ref() else {
                 return;
             };
 
             let variants = road_atlas.variants.max(1);
-            let variant_index = (current_road_variant.index as usize) % variants;
+            let variant_index = (inputs.variants.road.index as usize) % variants;
             *cached_tile = Some((tile_pos, active_type));
 
             let mut sprite = Sprite::from_atlas_image(
@@ -154,17 +173,17 @@ pub fn update_road_hover_preview(
             // 30% opacity so the user can see both the tile and the preview
             sprite.color = Color::srgba(1.0, 1.0, 1.0, 0.3);
 
-            commands.spawn((
+            inputs.commands.spawn((
                 sprite,
                 Transform::from_xyz(world_pos.x, world_pos.y, 8.0),
                 RoadHoverPreview,
             ));
         }
         BuildingType::Residential => {
-            let Some(tile_preview_atlas) = tile_preview_atlas else {
+            let Some(tile_preview_atlas) = inputs.atlases.tile_preview.as_ref() else {
                 return;
             };
-            let Some(residential_atlas) = residential_atlas else {
+            let Some(residential_atlas) = inputs.atlases.residential.as_ref() else {
                 return;
             };
 
@@ -184,11 +203,11 @@ pub fn update_road_hover_preview(
                 } else {
                     0
                 };
-                preview_variant.residential = Some(variant);
+                inputs.variants.preview.residential = Some(variant);
                 *cached_tile = Some((tile_pos, active_type));
                 variant
             } else {
-                preview_variant.residential.unwrap_or(0)
+                inputs.variants.preview.residential.unwrap_or(0)
             };
             
             // Houses 1-2 (indices 0,1) use tile 3; houses 3-5 (indices 2,3,4) use tile 2
@@ -203,7 +222,7 @@ pub fn update_road_hover_preview(
             );
             tile_sprite.color = Color::srgba(193.0 / 255.0, 231.0 / 255.0, 110.0 / 255.0, 0.2); // #c1e76e at ~20% opacity
 
-            commands.spawn((
+            inputs.commands.spawn((
                 tile_sprite,
                 Transform::from_xyz(world_pos.x, world_pos.y, 7.5),
                 RoadHoverPreview,
@@ -219,17 +238,17 @@ pub fn update_road_hover_preview(
             );
             building_sprite.color = Color::srgba(1.0, 1.0, 0.8, 0.5);
 
-            commands.spawn((
+            inputs.commands.spawn((
                 building_sprite,
                 Transform::from_xyz(world_pos.x, world_pos.y, 10.0),
                 RoadHoverPreview,
             ));
         }
         BuildingType::Commercial => {
-            let Some(tile_preview_atlas) = tile_preview_atlas else {
+            let Some(tile_preview_atlas) = inputs.atlases.tile_preview.as_ref() else {
                 return;
             };
-            let Some(commercial_atlas) = commercial_atlas else {
+            let Some(commercial_atlas) = inputs.atlases.commercial.as_ref() else {
                 return;
             };
 
@@ -239,11 +258,11 @@ pub fn update_road_hover_preview(
             let variant_index = if needs_new_variant {
                 let mut rng = rand::thread_rng();
                 let variant = rng.gen_range(0..variants);
-                preview_variant.commercial = Some(variant);
+                inputs.variants.preview.commercial = Some(variant);
                 *cached_tile = Some((tile_pos, active_type));
                 variant
             } else {
-                preview_variant.commercial.unwrap_or(0)
+                inputs.variants.preview.commercial.unwrap_or(0)
             };
 
             // Tinted base tile preview (commercial color)
@@ -256,7 +275,7 @@ pub fn update_road_hover_preview(
             );
             tile_sprite.color = Color::srgba(123.0 / 255.0, 194.0 / 255.0, 212.0 / 255.0, 0.2); // #7bc2d4 at ~20% opacity
 
-            commands.spawn((
+            inputs.commands.spawn((
                 tile_sprite,
                 Transform::from_xyz(world_pos.x, world_pos.y, 7.5),
                 RoadHoverPreview,
@@ -271,17 +290,17 @@ pub fn update_road_hover_preview(
             );
             building_sprite.color = Color::srgba(1.0, 1.0, 0.8, 0.5);
 
-            commands.spawn((
+            inputs.commands.spawn((
                 building_sprite,
                 Transform::from_xyz(world_pos.x, world_pos.y, 10.0),
                 RoadHoverPreview,
             ));
         }
         BuildingType::Industry => {
-            let Some(tile_preview_atlas) = tile_preview_atlas else {
+            let Some(tile_preview_atlas) = inputs.atlases.tile_preview.as_ref() else {
                 return;
             };
-            let Some(industry_atlas) = industry_atlas else {
+            let Some(industry_atlas) = inputs.atlases.industry.as_ref() else {
                 return;
             };
 
@@ -291,11 +310,11 @@ pub fn update_road_hover_preview(
             let variant_index = if needs_new_variant {
                 let mut rng = rand::thread_rng();
                 let variant = rng.gen_range(0..variants);
-                preview_variant.industry = Some(variant);
+                inputs.variants.preview.industry = Some(variant);
                 *cached_tile = Some((tile_pos, active_type));
                 variant
             } else {
-                preview_variant.industry.unwrap_or(0)
+                inputs.variants.preview.industry.unwrap_or(0)
             };
 
             // Tinted base tile preview
@@ -308,7 +327,7 @@ pub fn update_road_hover_preview(
             );
             tile_sprite.color = Color::srgba(123.0 / 255.0, 194.0 / 255.0, 212.0 / 255.0, 0.2); // #7bc2d4 at ~20% opacity
 
-            commands.spawn((
+            inputs.commands.spawn((
                 tile_sprite,
                 Transform::from_xyz(world_pos.x, world_pos.y, 7.5),
                 RoadHoverPreview,
@@ -323,22 +342,22 @@ pub fn update_road_hover_preview(
             );
             building_sprite.color = Color::srgba(1.0, 1.0, 0.8, 0.5);
 
-            commands.spawn((
+            inputs.commands.spawn((
                 building_sprite,
                 Transform::from_xyz(world_pos.x, world_pos.y, 10.0),
                 RoadHoverPreview,
             ));
         }
         BuildingType::Decorative => {
-            let Some(tile_preview_atlas) = tile_preview_atlas else {
+            let Some(tile_preview_atlas) = inputs.atlases.tile_preview.as_ref() else {
                 return;
             };
-            let Some(decorative_atlas) = decorative_atlas else {
+            let Some(decorative_atlas) = inputs.atlases.decorative.as_ref() else {
                 return;
             };
 
             let variants = decorative_atlas.variants.max(1);
-            let variant_index = (current_decorative_variant.index as usize) % variants;
+            let variant_index = (inputs.variants.decorative.index as usize) % variants;
 
             // Tinted base tile preview (decorative color)
             let mut tile_sprite = Sprite::from_atlas_image(
@@ -350,7 +369,7 @@ pub fn update_road_hover_preview(
             );
             tile_sprite.color = Color::srgba(1.0, 0.6, 0.9, 0.2); // pink at ~20% opacity
 
-            commands.spawn((
+            inputs.commands.spawn((
                 tile_sprite,
                 Transform::from_xyz(world_pos.x, world_pos.y, 7.5),
                 RoadHoverPreview,
@@ -366,7 +385,7 @@ pub fn update_road_hover_preview(
             );
             building_sprite.color = Color::srgba(1.0, 1.0, 0.8, 0.5);
 
-            commands.spawn((
+            inputs.commands.spawn((
                 building_sprite,
                 Transform::from_xyz(world_pos.x, world_pos.y, 10.0),
                 RoadHoverPreview,

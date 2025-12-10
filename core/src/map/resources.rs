@@ -18,15 +18,9 @@ pub struct UiClickBlocker {
     pub just_clicked_ui: bool,
 }
 
-#[derive(Resource)]
+#[derive(Resource, Default)]
 pub struct CurrentTileType {
     pub texture_index: u32,
-}
-
-impl Default for CurrentTileType {
-    fn default() -> Self {
-        Self { texture_index: 0 }
-    }
 }
 
 /// Tracks which road sprite in `roads.png` is currently selected

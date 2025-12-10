@@ -52,10 +52,10 @@ pub fn demolish_tile_on_click(
     building_sprites_q: BuildingSpritesQuery<'_, '_>,
     help_state: Option<Res<HelpOverlayState>>,
 ) {
-    if let Some(state) = help_state {
-        if state.active {
-            return;
-        }
+    if let Some(state) = help_state
+        && state.active
+    {
+        return;
     }
     if !inputs.mouse_button.just_pressed(MouseButton::Left) {
         return;
