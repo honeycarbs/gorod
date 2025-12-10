@@ -98,6 +98,9 @@ pub fn update_infrastructure_from_building_events(
             BuildingType::Road => {
                 infra.road_count += 1;
             }
+            BuildingType::Decorative => {
+                infra.decorative_count += 1;
+            }
         }
     }
 
@@ -118,6 +121,9 @@ pub fn update_infrastructure_from_building_events(
             BuildingType::Road => {
                 infra.road_count -= 1;
             }
+            BuildingType::Decorative => {
+                infra.decorative_count -= 1;
+            }
         }
     }
 
@@ -125,6 +131,7 @@ pub fn update_infrastructure_from_building_events(
     infra.commercial_count = infra.commercial_count.max(0);
     infra.industry_count = infra.industry_count.max(0);
     infra.road_count = infra.road_count.max(0);
+    infra.decorative_count = infra.decorative_count.max(0);
     infra.industry_job_capacity = infra.industry_job_capacity.max(0);
     infra.commercial_job_capacity = infra.commercial_job_capacity.max(0);
 }

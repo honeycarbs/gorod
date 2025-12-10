@@ -17,6 +17,7 @@ type BuildingSpritesQuery<'w, 's> = Query<
         Option<&'static CommercialBuilding>,
         Option<&'static IndustryBuilding>,
         Option<&'static RoadSegment>,
+        Option<&'static DecorativeBuilding>,
     ),
 >;
 
@@ -110,7 +111,7 @@ pub fn demolish_tile_on_click(
 
                     // Detect building type from sprite component for accurate event
                     let mut detected_type: Option<BuildingType> = None;
-                    for (entity, residential, commercial, industry, road) in
+                    for (entity, residential, commercial, industry, road, decorative) in
                         building_sprites_q.iter()
                     {
                         if let Some(b) = residential
@@ -132,6 +133,11 @@ pub fn demolish_tile_on_click(
                             && b.tile_pos == tile_pos
                         {
                             detected_type = Some(BuildingType::Road);
+                            commands.entity(entity).despawn();
+                        } else if let Some(b) = decorative
+                            && b.tile_pos == tile_pos
+                        {
+                            detected_type = Some(BuildingType::Decorative);
                             commands.entity(entity).despawn();
                         }
                     }

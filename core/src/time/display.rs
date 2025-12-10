@@ -218,8 +218,8 @@ Your town will grow if people are happy.",
                                 "You start in the middle of the map and only tiles near the center are\n\
 placeable at the beginning.\n\
 \n\
-Press R/C/I/O or use the buttons to select Residential, Commercial,\n\
-Industry or Roads.\n\
+Press R/C/I/B/O or use the buttons to select Residential, Commercial,\n\
+Industry, Decorative or Roads.\n\
 \n\
 Use ',' and '.' to change building or road variants.\n\
 \n\

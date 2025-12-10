@@ -71,8 +71,10 @@ pub fn execute_placement_intents(
     commercial_atlas: Res<CommercialBuildingAtlas>,
     industry_atlas: Res<IndustryBuildingAtlas>,
     road_atlas: Res<RoadAtlas>,
+    decorative_atlas: Res<DecorativeBuildingAtlas>,
     preview_variant: Res<PreviewVariant>,
     current_road_variant: Res<CurrentRoadVariant>,
+    current_decorative_variant: Res<CurrentDecorativeVariant>,
     mut commands: Commands,
     map_q: Query<(&TilemapSize, &TilemapGridSize, &Transform)>,
 ) {
@@ -132,6 +134,10 @@ pub fn execute_placement_intents(
                 }
                 BuildingType::Road => {
                     let variant = (current_road_variant.index as usize) % road_atlas.variants.max(1);
+                    (4, variant)
+                }
+                BuildingType::Decorative => {
+                    let variant = (current_decorative_variant.index as usize) % decorative_atlas.variants.max(1);
                     (4, variant)
                 }
             };
@@ -224,6 +230,25 @@ pub fn execute_placement_intents(
                         tile_pos: *tile_pos,
                     },
                 ));
+            } else if intent.building_type == BuildingType::Decorative && decorative_atlas.variants > 0 {
+                let world_pos = tile_center_to_world(tile_pos, map_size, grid_size, map_transform);
+                let variant_index = (current_decorative_variant.index as usize) % decorative_atlas.variants.max(1);
+
+                let sprite = Sprite::from_atlas_image(
+                    decorative_atlas.texture.clone(),
+                    TextureAtlas {
+                        layout: decorative_atlas.layout.clone(),
+                        index: variant_index,
+                    },
+                );
+
+                commands.spawn((
+                    sprite,
+                    Transform::from_xyz(world_pos.x, world_pos.y, 10.0),
+                    DecorativeBuilding {
+                        tile_pos: *tile_pos,
+                    },
+                ));
             }
 
             break;
@@ -237,9 +262,11 @@ pub fn change_tile_type(
     mut current_commercial_variant: ResMut<CurrentCommercialVariant>,
     mut current_industry_variant: ResMut<CurrentIndustryVariant>,
     mut current_road_variant: ResMut<CurrentRoadVariant>,
+    mut current_decorative_variant: ResMut<CurrentDecorativeVariant>,
     mut preview_variant: ResMut<PreviewVariant>,
     residential_atlas: Option<Res<ResidentialBuildingAtlas>>,
     road_atlas: Option<Res<RoadAtlas>>,
+    decorative_atlas: Option<Res<DecorativeBuildingAtlas>>,
     help_state: Option<Res<HelpOverlayState>>,
 ) {
     if let Some(state) = help_state {
@@ -262,6 +289,9 @@ pub fn change_tile_type(
     } else if keyboard.just_pressed(KeyCode::KeyO) {
         current_tile_type.texture_index = 5;
         info!("Selected: Road");
+    } else if keyboard.just_pressed(KeyCode::KeyB) {
+        current_tile_type.texture_index = 6;
+        info!("Selected: Decorative");
     }
 
     // When a building type is selected, allow cycling through its variants
@@ -331,6 +361,19 @@ pub fn change_tile_type(
                             "Selected industry variant: {}",
                             current_industry_variant.index
                         );
+                    }
+                }
+                crate::budget::BuildingType::Decorative => {
+                    let current = current_decorative_variant.index as i32;
+                    let variants = decorative_atlas
+                        .as_ref()
+                        .map(|a| a.variants as i32)
+                        .unwrap_or(DECORATIVE_VARIANT_COUNT as i32);
+
+                    if variants > 0 {
+                        let new_index = current + delta;
+                        current_decorative_variant.index = new_index.rem_euclid(variants) as u32;
+                        info!("Selected decorative variant: {}", current_decorative_variant.index);
                     }
                 }
             }

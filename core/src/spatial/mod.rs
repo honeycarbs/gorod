@@ -73,6 +73,7 @@ impl SpatialGrid {
             BuildingType::Commercial => self.commercial.insert(pos),
             BuildingType::Industry => self.industry.insert(pos),
             BuildingType::Road => self.roads.insert(pos),
+            BuildingType::Decorative => {}
         }
     }
 
@@ -83,6 +84,7 @@ impl SpatialGrid {
             BuildingType::Commercial => self.commercial.remove(pos),
             BuildingType::Industry => self.industry.remove(pos),
             BuildingType::Road => self.roads.remove(pos),
+            BuildingType::Decorative => {}
         }
     }
 

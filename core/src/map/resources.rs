@@ -35,12 +35,6 @@ pub struct CurrentRoadVariant {
     pub index: u32,
 }
 
-/// Tracks which residential building sprite in `houses.png` is currently selected
-#[derive(Resource, Default)]
-pub struct CurrentResidentialVariant {
-    pub index: u32,
-}
-
 /// Tracks which commercial building sprite in `commercial.png` is currently selected
 #[derive(Resource, Default)]
 pub struct CurrentCommercialVariant {
@@ -50,6 +44,12 @@ pub struct CurrentCommercialVariant {
 /// Tracks which industry building sprite in `factory.png` is currently selected
 #[derive(Resource, Default)]
 pub struct CurrentIndustryVariant {
+    pub index: u32,
+}
+
+/// Tracks which decorative building sprite in `decorative.png` is currently selected
+#[derive(Resource, Default)]
+pub struct CurrentDecorativeVariant {
     pub index: u32,
 }
 
@@ -106,6 +106,9 @@ pub const INDUSTRY_VARIANT_COUNT: usize = 2;
 /// Number of road variants in the `roads.png` sprite sheet
 pub const ROAD_VARIANT_COUNT: usize = 11;
 
+/// Number of decorative building variants in the `decorative.png` sprite sheet
+pub const DECORATIVE_VARIANT_COUNT: usize = 4;
+
 /// Number of tile variants in the `tiles.png` sprite sheet used for previews
 pub const TILE_PREVIEW_VARIANT_COUNT: usize = 5;
 
@@ -138,6 +141,13 @@ pub struct RoadAtlas {
 }
 
 #[derive(Resource)]
+pub struct DecorativeBuildingAtlas {
+    pub texture: Handle<Image>,
+    pub layout: Handle<TextureAtlasLayout>,
+    pub variants: usize,
+}
+
+#[derive(Resource)]
 pub struct TilePreviewAtlas {
     pub texture: Handle<Image>,
     pub layout: Handle<TextureAtlasLayout>,
@@ -160,6 +170,11 @@ pub struct IndustryBuilding {
 
 #[derive(Component)]
 pub struct RoadSegment {
+    pub tile_pos: TilePos,
+}
+
+#[derive(Component)]
+pub struct DecorativeBuilding {
     pub tile_pos: TilePos,
 }
 
@@ -252,6 +267,28 @@ pub fn setup_roads_atlas(
         texture,
         layout,
         variants: ROAD_VARIANT_COUNT,
+    });
+}
+
+pub fn setup_decorative_building_atlas(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut layouts: ResMut<Assets<TextureAtlasLayout>>,
+) {
+    let texture: Handle<Image> = asset_server.load("sprites/decorative.png");
+
+    let layout = layouts.add(TextureAtlasLayout::from_grid(
+        UVec2::new(96, 96),
+        1,
+        DECORATIVE_VARIANT_COUNT as u32,
+        None,
+        None,
+    ));
+
+    commands.insert_resource(DecorativeBuildingAtlas {
+        texture,
+        layout,
+        variants: DECORATIVE_VARIANT_COUNT,
     });
 }
 

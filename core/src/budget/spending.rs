@@ -17,6 +17,7 @@ const ROAD_UPKEEP_PER_TILE: i64 = 0;
 const RES_UPKEEP_PER_BUILDING: i64 = 0;
 const COM_UPKEEP_PER_BUILDING: i64 = 2;
 const IND_UPKEEP_PER_BUILDING: i64 = 10;
+const DECORATIVE_UPKEEP_PER_BUILDING: i64 = 15;
 
 const NEGATIVE_BALANCE_PENALTY_DAYS: u32 = 3;
 const NEGATIVE_BALANCE_HAPPINESS_PENALTY: f32 = 0.01;
@@ -98,8 +99,9 @@ pub fn update_income_on_day_tick(
     let residential_upkeep = infra.residential_count * RES_UPKEEP_PER_BUILDING;
     let commercial_upkeep = infra.commercial_count * COM_UPKEEP_PER_BUILDING;
     let industry_upkeep = infra.industry_count * IND_UPKEEP_PER_BUILDING;
+    let decorative_upkeep = infra.decorative_count * DECORATIVE_UPKEEP_PER_BUILDING;
 
-    let upkeep = road_upkeep + residential_upkeep + commercial_upkeep + industry_upkeep;
+    let upkeep = road_upkeep + residential_upkeep + commercial_upkeep + industry_upkeep + decorative_upkeep;
 
     let net = total_income - upkeep;
     budget.money += net;

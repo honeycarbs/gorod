@@ -18,9 +18,9 @@ impl Plugin for TilePlacementPlugin {
         app.init_resource::<CursorWorldPos>()
             .init_resource::<CurrentTileType>()
             .init_resource::<CurrentRoadVariant>()
-            .init_resource::<CurrentResidentialVariant>()
             .init_resource::<CurrentCommercialVariant>()
             .init_resource::<CurrentIndustryVariant>()
+            .init_resource::<CurrentDecorativeVariant>()
             .init_resource::<PreviewVariant>()
             .init_resource::<PlaceableMap>()
             .init_resource::<UiClickBlocker>()
@@ -34,6 +34,7 @@ impl Plugin for TilePlacementPlugin {
                     resources::setup_commercial_building_atlas,
                     resources::setup_industry_building_atlas,
                     resources::setup_roads_atlas,
+                    resources::setup_decorative_building_atlas,
                     resources::setup_tile_preview_atlas,
                 ),
             )

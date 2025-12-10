@@ -120,6 +120,7 @@ pub fn apply_demolition_happiness(
                 positive + negative
             }
             BuildingType::Road => 0.0,
+            BuildingType::Decorative => 0.0,
         };
 
         delta = delta.clamp(-0.05, 0.05);
@@ -178,6 +179,9 @@ pub fn apply_placement_happiness(
             BuildingType::Road => {
                 let base = 0.003 * nearby_residential as f32;
                 base * housing_need
+            }
+            BuildingType::Decorative => {
+                0.01 * nearby_residential as f32
             }
         };
 

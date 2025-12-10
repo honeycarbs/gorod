@@ -62,6 +62,8 @@ pub fn update_road_hover_preview(
     residential_atlas: Option<Res<ResidentialBuildingAtlas>>,
     commercial_atlas: Option<Res<CommercialBuildingAtlas>>,
     industry_atlas: Option<Res<IndustryBuildingAtlas>>,
+    decorative_atlas: Option<Res<DecorativeBuildingAtlas>>,
+    current_decorative_variant: Res<CurrentDecorativeVariant>,
     tile_preview_atlas: Option<Res<TilePreviewAtlas>>,
     tilemap_q: Query<(
         &TilemapSize,
@@ -316,6 +318,49 @@ pub fn update_road_hover_preview(
                 industry_atlas.texture.clone(),
                 TextureAtlas {
                     layout: industry_atlas.layout.clone(),
+                    index: variant_index,
+                },
+            );
+            building_sprite.color = Color::srgba(1.0, 1.0, 0.8, 0.5);
+
+            commands.spawn((
+                building_sprite,
+                Transform::from_xyz(world_pos.x, world_pos.y, 10.0),
+                RoadHoverPreview,
+            ));
+        }
+        BuildingType::Decorative => {
+            let Some(tile_preview_atlas) = tile_preview_atlas else {
+                return;
+            };
+            let Some(decorative_atlas) = decorative_atlas else {
+                return;
+            };
+
+            let variants = decorative_atlas.variants.max(1);
+            let variant_index = (current_decorative_variant.index as usize) % variants;
+
+            // Tinted base tile preview (decorative color)
+            let mut tile_sprite = Sprite::from_atlas_image(
+                tile_preview_atlas.texture.clone(),
+                TextureAtlas {
+                    layout: tile_preview_atlas.layout.clone(),
+                    index: 4, // decorative uses tile 4
+                },
+            );
+            tile_sprite.color = Color::srgba(1.0, 0.6, 0.9, 0.2); // pink at ~20% opacity
+
+            commands.spawn((
+                tile_sprite,
+                Transform::from_xyz(world_pos.x, world_pos.y, 7.5),
+                RoadHoverPreview,
+            ));
+
+            // Preview selected decorative building variant
+            let mut building_sprite = Sprite::from_atlas_image(
+                decorative_atlas.texture.clone(),
+                TextureAtlas {
+                    layout: decorative_atlas.layout.clone(),
                     index: variant_index,
                 },
             );

@@ -1,0 +1,488 @@
+This document describes the core gameplay mechanics, progression systems, budget
+rules, and environmental change rates for the Gorod city-building game.
+
+1. GAMEPLAY LOOP & PROGRESSION
+
+1.1 CORE CONCEPT
+----------------
+Gorod (Russian for "city") is a tile-based city-building game inspired by
+Cities: Skylines. Players manage a city on a 32x32 tile map, balancing
+housing, jobs, entertainment, and budget to grow population and maintain
+citizen happiness.
+
+1.2 INITIAL STATE
+-----------------
+- Starting Budget: $50,000
+- Starting Area: 3x3 placeable zone in the center of the map
+- Initial Population: 0
+- Initial Happiness: 1.0 (100%)
+- Map Size: 32x32 tiles
+
+1.3 BUILDING TYPES & CONTRIBUTIONS
+-----------------------------------
++------------------+--------+----------+------+---------------+
+| Building Type    | Cost   | Housing  | Jobs | Entertainment |
++------------------+--------+----------+------+---------------+
+| Residential      | $1,000 | +10      | 0    | 0             |
+| Commercial       | $1,300 | 0        | +5   | +15           |
+| Industry         | $2,000 | 0        | +15  | +3            |
+| Road             | $50    | 0        | 0    | 0             |
+| Decorative       | $500   | 0        | 0    | +20           |
++------------------+--------+----------+------+---------------+
+
+1.4 EXPANSION MECHANIC
+----------------------
+- Placeable tiles expand 2 tiles outward from any placed building
+- Buildings only contribute to city stats if within 4 tiles of a road
+  (accessibility check)
+- Cannot demolish the last building on the map
+- Placeable area updates incrementally when buildings are demolished
+
+1.4.1 DECORATIVE TILES
+-----------------------
+Decorative tiles are special buildings that provide entertainment but have
+expensive upkeep:
+
+- Selection: Press 'B' key or click the decorative button
+- Variants: Use ',' and '.' keys to cycle through decorative variants (like roads)
+- Entertainment: Provides +20 entertainment capacity per tile
+- Cost: $500 to build
+- Upkeep: $15 per day (most expensive upkeep in the game)
+- Purpose: Boost entertainment capacity for growing cities, but require
+  careful budget management due to high maintenance costs
+- Placement: Uses tile index 4 (same visual tile as commercial/industry/road)
+
+1.5 POPULATION GROWTH
+---------------------
+- Checked once per in-game day
+- Population moves 35% of the way toward target each day
+- Formula: step = (target_population - current_population) * 0.35
+- Daily growth is capped at ±5 normally, ±8 when happiness > 0.8
+- If step rounds to 0, move by 1 in the correct direction
+- If housing_capacity == 0, population gradually decreases to 0
+
+Immigration Mechanic:
+- When happiness >= 0.7 and job_availability >= 0.5, people want to move in
+- target_population = housing_capacity + immigration_bonus
+- Immigration allows population to exceed housing capacity
+- Base rate: 0.5% of population per day at perfect happiness
+- Diminishing returns: growth slows by 30% as population approaches 1000
+- Formula: see section 5.1 for details
+
+1.6 HAPPINESS SYSTEM
+--------------------
+Happiness ranges from 0.0 to 1.0 and affects multiple systems:
+
+a) Worker Productivity
+   productive_workers = employed * happiness.clamp(0.0, 1.0)
+   
+b) Abandonment Triggers
+   - Below 0.7 happiness, buildings can be abandoned every 3 days
+   
+c) Immigration & Growth Pressure
+   - At >= 70% happiness with adequate jobs, immigration begins
+   - Population can grow beyond housing capacity via immigration
+   - At >= 90% happiness, extra housing demand is shown in UI
+   - Formula: happy_growth_bonus = (pop * 0.02) * happiness_factor
+   - Creates continuous expansion pressure when city is thriving
+
+1.7 DEMAND SYSTEM
+-----------------
+Demands are calculated every frame based on current population and capacities:
+
+- Housing Demand = (population + happy_growth_bonus - housing_capacity).max(0)
+- Job Demand = (population - job_capacity).max(0)
+- Entertainment Demand = (population - entertainment_capacity).max(0)
+
+Happy growth bonus only applies when happiness >= 0.90 and represents pent-up
+demand from people who want to move in but haven't yet (2% of population).
+
+Demand meters in the UI are color-coded to provide visual feedback:
+- White: Demand ratio < 10% of population (low demand)
+- Yellow: Demand ratio 10-20% of population (moderate demand)
+- Red: Demand ratio > 20% of population (high demand, warning state)
+
+2. BUDGET RULES
+
+2.1 INCOME (Daily)
+------------------
+Income is calculated once per in-game day:
+
+Constants:
+- WORKER_TAX_PER_DAY = 8
+- INDUSTRY_PROFIT_PER_WORKER = 3.0
+- COMMERCIAL_PROFIT_PER_WORKER = 2.0
+
+Calculation:
+  employed = min(population, job_capacity)
+  productive_workers = employed * happiness.clamp(0.0, 1.0)
+  
+  income_from_workers = productive_workers * 8
+  
+  // Distribute workers proportionally across sectors
+  industry_workers = employed * (industry_job_capacity / total_job_capacity)
+  commercial_workers = employed * (commercial_job_capacity / total_job_capacity)
+  
+  // Calculate staffing ratios and efficiency multipliers
+  // Buildings below 83.3% capacity receive reduced income
+  industry_staffing_ratio = industry_workers / industry_job_capacity
+  commercial_staffing_ratio = commercial_workers / commercial_job_capacity
+  
+  industry_efficiency = min(1.0, industry_staffing_ratio * 1.2)
+  commercial_efficiency = min(1.0, commercial_staffing_ratio * 1.2)
+  
+  // Apply efficiency to productive workers (happiness-adjusted)
+  industry_productive = (industry_workers * happiness) * industry_efficiency
+  commercial_productive = (commercial_workers * happiness) * commercial_efficiency
+  
+  income_from_corporations = 
+    (industry_productive * 3.0 + commercial_productive * 2.0).round()
+  
+  total_income = income_from_workers + income_from_corporations
+
+Efficiency Loss:
+Commercial and Industry buildings receive reduced income when operating below
+full capacity. The efficiency multiplier scales income based on staffing ratio:
+- staffing_ratio = workers_in_sector / job_capacity_in_sector
+- efficiency_multiplier = min(1.0, staffing_ratio * 1.2)
+- Buildings below 83.3% capacity receive reduced income
+- Example: At 50% utilization, income is reduced to 60% (0.5 * 1.2 = 0.6)
+
+2.2 UPKEEP (Daily)
+------------------
++------------------+---------------+
+| Building Type    | Upkeep/Day    |
++------------------+---------------+
+| Road             | $0            |
+| Residential      | $0            |
+| Commercial       | $2            |
+| Industry         | $10           |
+| Decorative       | $15           |
++------------------+---------------+
+
+Net Daily Change = total_income - upkeep
+
+2.3 BUDGET EFFECTS ON HAPPINESS
+--------------------------------
++----------------------------------------+------------------+
+| Condition                              | Effect           |
++----------------------------------------+------------------+
+| Negative balance for >= 3 days         | -0.01/day        |
+| Budget > $100,000 AND all demands = 0  | +0.005/day       |
++----------------------------------------+------------------+
+
+2.4 CONSTRUCTION COSTS
+----------------------
+Buildings cost money upfront when placed. If budget is insufficient, placement
+fails and a TransactionFailed event is emitted.
+
+================================================================================
+3. RATE OF ENVIRONMENTAL CHANGES
+================================================================================
+
+3.1 TIME SYSTEM
+---------------
+Time multipliers (relative to real-time):
+
++------------------+------------------+---------------------------+
+| Speed Mode       | Multiplier       | Description               |
++------------------+------------------+---------------------------+
+| Paused           | 0x               | Time stops                |
+| Normal (1x)      | 10,080x          | 1 week per 60 real sec    |
+| Fast (2x)        | 20,160x          | 2x normal rate            |
+| UltraFast (3x)   | 40,320x          | 4x normal rate            |
++------------------+------------------+---------------------------+
+
+At Normal speed:
+- 1 in-game second ≈ 168 real milliseconds
+- 1 in-game minute ≈ 10 real seconds
+- 1 in-game hour ≈ 6 real minutes
+- 1 in-game day ≈ 8.6 real seconds
+
+3.2 DAILY UPDATE TRIGGERS
+--------------------------
+These systems run once per in-game day:
+
++--------------------------+------------------+
+| System                   | Frequency        |
++--------------------------+------------------+
+| Population adjustment    | Daily            |
+| Happiness recalculation  | Daily            |
+| Income/upkeep processing | Daily            |
+| Demand updates           | Every frame*     |
++--------------------------+------------------+
+
+* Demands are recalculated every frame but are derived from daily stats
+
+3.3 HAPPINESS CHANGE RATES
+---------------------------
+
+a) From Service Pressures (Daily)
+   pressure = 0.8 * housing_pressure + 
+              0.6 * job_pressure + 
+              0.25 * entertainment_shortfall
+   
+   pressure is capped at 1.5
+   
+   target_happiness = (1.0 - pressure).clamp(0.0, 1.0)
+   new_happiness = old_happiness + (target - old) * 0.375
+   
+   Happiness moves 37.5% of the way toward target each day.
+
+b) From Building Placement (Instant)
+   +------------------+----------------------------------------------+
+   | Action           | Happiness Delta                              |
+   +------------------+----------------------------------------------+
+   | Place Residential| +0.01 * (nearby_res + 1) * housing_need     |
+   | Place Commercial | +0.015 * nearby_res * job_need              |
+   | Place Industry   | +0.01 * job_need - 0.005 * nearby_res -     |
+   |                  |   0.01 * (1 if nearby_res == 0 else 0)     |
+   | Place Road       | +0.003 * nearby_res * housing_need           |
+   | Place Decorative | +0.01 * nearby_residential                    |
+   +------------------+----------------------------------------------+
+   
+   All deltas clamped to ±0.05 per event.
+   
+   Note: Industry placement incurs an isolation penalty of -0.01 when
+   placed with no nearby residential buildings to discourage segregated
+   zoning strategies.
+
+c) From Demolition (Instant)
+   +------------------+----------------------------------------------+
+   | Action           | Happiness Delta                              |
+   +------------------+----------------------------------------------+
+   | Demolish Res     | -0.05 * housing_need (min 0.1)              |
+   | Demolish Com     | -0.02 * nearby_residential                   |
+   | Demolish Industry| +0.005 * nearby_res -                       |
+   |                  |   0.03 * job_pressure * (jobs_lost/10)      |
+   | Demolish Road    | 0.0                                          |
+   +------------------+----------------------------------------------+
+   
+   All deltas clamped to ±0.05 per event.
+   
+   Note: Residential demolition penalty scales with housing_need to
+   prevent exploit strategies involving rapid build-demolish cycles.
+   The penalty ranges from -0.005 (when housing_need is low) to -0.05
+   (when housing_need is high), ensuring that demolition penalties match
+   or exceed building bonuses to prevent net happiness gains from cycling.
+
+3.4 ABANDONMENT MECHANIC
+-------------------------
++------------------+------------------+
+| Parameter        | Value            |
++------------------+------------------+
+| Interval         | Every 3 days     |
+| Min Happiness    | < 0.7            |
+| Residential      | 1 building       |
+| Job Buildings    | Until 1 job cap  |
++------------------+------------------+
+
+Conditions:
+- Happiness must be < 0.7
+- For residential: housing_demand > 0
+- For commercial/industry: staffing_ratio < 0.6
+  (staffing_ratio = effective_workers / job_capacity)
+
+Abandoned buildings:
+- Change texture to abandoned (index 6)
+- Emit BuildingDemolished event
+- Despawn associated building sprites
+
+3.5 SPATIAL CONSTRAINTS
+------------------------
++--------------------------+------------------+
+| Constraint               | Distance (tiles) |
++--------------------------+------------------+
+| Placeable expansion      | 2                |
+| Road accessibility       | 4                |
+| Residential neighbor      | 3                |
+| detection (for happiness) |                  |
++--------------------------+------------------+
+
+================================================================================
+4. GAMEPLAY FLOW DIAGRAM
+================================================================================
+
+                    ┌─────────────────────────┐
+                    │   GAME STARTUP          │
+                    │  - Budget: $50,000      │
+                    │  - 3x3 placeable area   │
+                    │  - Population: 0        │
+                    │  - Happiness: 1.0       │
+                    └───────────┬─────────────┘
+                                │
+                                ▼
+                    ┌─────────────────────────┐
+                    │   PLAYER ACTIONS        │
+                    │  - Build (R/C/I/B/O)    │
+                    │  - Demolish (Shift+Click)│
+                    │  - Change variants (,/.) │
+                    │  - Control time (Space)  │
+                    └───────────┬─────────────┘
+                                │
+                                ▼
+                    ┌─────────────────────────┐
+                    │   DAILY SIMULATION      │
+                    │  (every ~8.6 sec @ 1x)  │
+                    │                         │
+                    │  1. Update Population   │
+                    │     (35% toward target, │
+                    │      includes immigr.)  │
+                    │                         │
+                    │  2. Calculate Demands   │
+                    │     (housing/jobs/ent)  │
+                    │                         │
+                    │  3. Update Happiness    │
+                    │     (37.5% toward target)│
+                    │                         │
+                    │  4. Process Income      │
+                    │     (workers + corps)   │
+                    │                         │
+                    │  5. Deduct Upkeep       │
+                    │     (com/ind/decorative)│
+                    │                         │
+                    │  6. Apply Budget Effects│
+                    │     (penalties/bonuses) │
+                    └───────────┬─────────────┘
+                                │
+                                ▼
+                    ┌─────────────────────────┐
+                    │   EVERY 3 DAYS          │
+                    │  - Check Abandonment    │
+                    │    (if happiness < 0.7) │
+                    └───────────┬─────────────┘
+                                │
+                                ▼
+                    ┌─────────────────────────┐
+                    │   CONTINUE LOOP          │
+                    │   (until game ends)     │
+                    └─────────────────────────┘
+
+5. KEY FORMULAS SUMMARY
+
+5.1 POPULATION GROWTH
+---------------------
+// Immigration calculation (when happiness >= 0.7 and job_availability >= 0.5)
+job_availability = min(1.0, job_capacity / population)
+happiness_factor = ((happiness - 0.7) / 0.3).clamp(0.0, 1.0)
+base_rate = 0.005
+pop_factor = min(1.0, population / 1000)
+growth_reduction = pop_factor * 0.3
+effective_rate = base_rate * happiness_factor * (1.0 - growth_reduction) * job_availability
+immigration_bonus = population * effective_rate
+
+target_population = housing_capacity + immigration_bonus (if housing_capacity > 0, else 0)
+
+// Daily growth step
+step = (target_population - current_population) * 0.35
+max_growth = 8 if (happiness > 0.8 and diff > 0) else 5
+step = step.clamp(-max_growth * 2, max_growth)
+if step == 0: step = sign(diff)
+new_population = current_population + step
+
+5.2 PRODUCTIVE WORKERS
+----------------------
+employed = min(population, job_capacity)
+productive_workers = employed * happiness.clamp(0.0, 1.0)
+
+5.3 DAILY INCOME
+----------------
+employed = min(population, job_capacity)
+productive_workers = employed * happiness.clamp(0.0, 1.0)
+
+income_from_workers = productive_workers * 8
+
+// Worker distribution across sectors
+industry_workers = employed * (industry_job_capacity / total_job_capacity)
+commercial_workers = employed * (commercial_job_capacity / total_job_capacity)
+
+// Efficiency calculation (prevents oversupply exploit)
+industry_staffing_ratio = industry_workers / industry_job_capacity
+commercial_staffing_ratio = commercial_workers / commercial_job_capacity
+
+industry_efficiency = min(1.0, industry_staffing_ratio * 1.2)
+commercial_efficiency = min(1.0, commercial_staffing_ratio * 1.2)
+
+// Apply efficiency to productive workers
+industry_productive = (industry_workers * happiness) * industry_efficiency
+commercial_productive = (commercial_workers * happiness) * commercial_efficiency
+
+corp_income = (industry_productive * 3.0 + commercial_productive * 2.0).round()
+total_income = income_from_workers + corp_income
+
+5.4 DAILY UPKEEP
+-----------------
+upkeep = (commercial_count * 2) + (industry_count * 10) + (decorative_count * 15)
+
+5.5 HAPPINESS PRESSURE
+----------------------
+housing_pressure = housing_demand / population (if pop > 0, else 0)
+job_pressure = job_demand / population (if pop > 0, else 0)
+entertainment_shortfall = entertainment_demand / population (if pop > 0, else 0)
+
+pressure = 0.8 * housing_pressure + 
+           0.6 * job_pressure + 
+           0.25 * entertainment_shortfall
+pressure = pressure.clamp(0.0, 1.5)
+
+target_happiness = (1.0 - pressure).clamp(0.0, 1.0)
+new_happiness = old_happiness + (target_happiness - old_happiness) * 0.375
+
+5.6 HAPPY GROWTH BONUS (Demand Display)
+---------------------------------------
+// Represents pent-up demand in UI; actual growth handled by immigration
+if happiness >= 0.90 and population > 0:
+    happiness_factor = ((happiness - 0.90) / 0.10).clamp(0.0, 1.0)
+    happy_growth_bonus = (population * 0.02) * happiness_factor
+else:
+    happy_growth_bonus = 0
+
+6. BUILDING ACCESSIBILITY
+
+Buildings must be within 4 tiles of a road to contribute to city stats and
+affect happiness calculations. This is checked when:
+- Calculating building placement happiness effects
+- Determining if a building is "accessible"
+
+The accessibility check scans a 4-tile radius (9x9 area) around the building
+for road tiles.
+
+7. PLACEABLE AREA EXPANSION
+
+When a building is placed:
+- All tiles within 2 tiles (5x5 area) become placeable
+- This happens immediately upon placement
+
+When a building is demolished:
+- Placeable area is recalculated incrementally
+- Tiles that are no longer within 2 tiles of any building become unplaceable
+- This prevents isolated tiles from remaining placeable
+
+================================================================================
+8. OPTIMIZATIONS
+================================================================================
+
+8.1 SPATIAL GRID
+----------------
+The game uses a spatial hash map to optimize neighbor detection queries. Instead
+of scanning tiles in a radius (O(r²) per query), buildings are indexed by grid
+cell for O(1) average-case lookups.
+
+Implementation:
+- Cell size: 8 tiles
+- Buildings are indexed by type (residential, commercial, industry, road)
+- Supports Chebyshev distance queries (square radius)
+
+Complexity improvements:
++---------------------------+----------------+----------------+
+| Operation                 | Before         | After          |
++---------------------------+----------------+----------------+
+| Road accessibility check  | O(81) per bldg | O(k) avg       |
+| Nearby residential count  | O(49) per bldg | O(k) avg       |
+| Placeable area expansion  | O(n × 25)      | O(n × k) avg   |
++---------------------------+----------------+----------------+
+
+Where k = average buildings per queried cell (typically < 10)
+
+The spatial grid is automatically synchronized via BuildingPlaced and
+BuildingDemolished events, keeping it consistent with tilemap state

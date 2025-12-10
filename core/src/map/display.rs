@@ -25,6 +25,7 @@ fn button_base_color(building_type: BuildingType) -> Color {
         BuildingType::Commercial => Color::srgba(0.6, 1.0, 0.6, 1.0),
         BuildingType::Industry => Color::srgba(1.0, 0.9, 0.6, 1.0),
         BuildingType::Road => Color::srgba(0.8, 0.8, 0.8, 1.0),
+        BuildingType::Decorative => Color::srgba(1.0, 0.6, 0.9, 1.0),
     }
 }
 
@@ -124,6 +125,7 @@ pub fn setup_tile_select_buttons(mut commands: Commands, asset_server: Res<Asset
     );
     spawn_button(container, BuildingType::Industry, "I", &font, &mut commands);
     spawn_button(container, BuildingType::Road, "O", &font, &mut commands);
+    spawn_button(container, BuildingType::Decorative, "B", &font, &mut commands);
 }
 
 pub fn update_selected_tile_display(
@@ -143,6 +145,7 @@ pub fn update_selected_tile_display(
         Some(BuildingType::Commercial) => "Commercial (C)",
         Some(BuildingType::Industry) => "Industry (I)",
         Some(BuildingType::Road) => "Road (O)",
+        Some(BuildingType::Decorative) => "Decorative (B)",
         None => "None",
     };
 
@@ -169,6 +172,7 @@ pub fn handle_tile_select_button_presses(
                     BuildingType::Commercial => 3,
                     BuildingType::Industry => 4,
                     BuildingType::Road => 5,
+                    BuildingType::Decorative => 6,
                 };
             }
             Interaction::Hovered => {}
