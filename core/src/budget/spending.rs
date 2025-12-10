@@ -55,7 +55,7 @@ pub fn update_income_on_day_tick(
         let total_jobs = services.job_capacity as f32;
         let industry_job_cap = infra.industry_job_capacity as f32;
         let commercial_job_cap = infra.commercial_job_capacity as f32;
-        
+
         // Distribute workers proportionally across sectors
         let industry_workers = if total_jobs > 0.0 {
             (employed as f32) * (industry_job_cap / total_jobs)
@@ -67,7 +67,7 @@ pub fn update_income_on_day_tick(
         } else {
             0.0
         };
-        
+
         // Calculate staffing ratios and apply efficiency multiplier
         // effective_income = base_income * min(1.0, staffing_ratio * 1.2)
         let industry_staffing_ratio = if industry_job_cap > 0.0 {
@@ -80,14 +80,16 @@ pub fn update_income_on_day_tick(
         } else {
             1.0
         };
-        
+
         let industry_efficiency = (industry_staffing_ratio * 1.2).min(1.0);
         let commercial_efficiency = (commercial_staffing_ratio * 1.2).min(1.0);
-        
+
         // Apply efficiency multiplier to productive workers (happiness-adjusted)
-        let industry_productive = (industry_workers * population.happiness.clamp(0.0, 1.0)) * industry_efficiency;
-        let commercial_productive = (commercial_workers * population.happiness.clamp(0.0, 1.0)) * commercial_efficiency;
-        
+        let industry_productive =
+            (industry_workers * population.happiness.clamp(0.0, 1.0)) * industry_efficiency;
+        let commercial_productive =
+            (commercial_workers * population.happiness.clamp(0.0, 1.0)) * commercial_efficiency;
+
         corp_income += industry_productive * INDUSTRY_PROFIT_PER_WORKER;
         corp_income += commercial_productive * COMMERCIAL_PROFIT_PER_WORKER;
     }
@@ -101,7 +103,8 @@ pub fn update_income_on_day_tick(
     let industry_upkeep = infra.industry_count * IND_UPKEEP_PER_BUILDING;
     let decorative_upkeep = infra.decorative_count * DECORATIVE_UPKEEP_PER_BUILDING;
 
-    let upkeep = road_upkeep + residential_upkeep + commercial_upkeep + industry_upkeep + decorative_upkeep;
+    let upkeep =
+        road_upkeep + residential_upkeep + commercial_upkeep + industry_upkeep + decorative_upkeep;
 
     let net = total_income - upkeep;
     budget.money += net;

@@ -123,7 +123,8 @@ pub fn incremental_update_placeable_area(
                         continue;
                     }
 
-                    let should_be_placeable = is_within_range_of_placed_tile(&check_pos, spatial_grid);
+                    let should_be_placeable =
+                        is_within_range_of_placed_tile(&check_pos, spatial_grid);
 
                     if should_be_placeable {
                         placeable_map.mark_placeable(check_pos);

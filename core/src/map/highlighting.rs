@@ -143,9 +143,7 @@ pub fn update_road_hover_preview(
     // Check if we need to generate a new random variant (when tile or building type changes)
     let needs_new_variant = cached_tile
         .as_ref()
-        .map(|(cached_pos, cached_type)| {
-            *cached_pos != tile_pos || *cached_type != active_type
-        })
+        .map(|(cached_pos, cached_type)| *cached_pos != tile_pos || *cached_type != active_type)
         .unwrap_or(true);
 
     // Clear any existing preview entity (there should be at most one)
@@ -188,7 +186,7 @@ pub fn update_road_hover_preview(
             };
 
             let variants = residential_atlas.variants.max(1);
-            
+
             // Generate random variant once when tile or building type changes
             let variant_index = if needs_new_variant {
                 let mut rng = rand::thread_rng();
@@ -209,10 +207,10 @@ pub fn update_road_hover_preview(
             } else {
                 inputs.variants.preview.residential.unwrap_or(0)
             };
-            
+
             // Houses 1-2 (indices 0,1) use tile 3; houses 3-5 (indices 2,3,4) use tile 2
             let tile_index = if variant_index <= 1 { 3 } else { 2 };
-            
+
             let mut tile_sprite = Sprite::from_atlas_image(
                 tile_preview_atlas.texture.clone(),
                 TextureAtlas {
@@ -253,7 +251,7 @@ pub fn update_road_hover_preview(
             };
 
             let variants = commercial_atlas.variants.max(1);
-            
+
             // Generate random variant once when tile or building type changes
             let variant_index = if needs_new_variant {
                 let mut rng = rand::thread_rng();
@@ -305,7 +303,7 @@ pub fn update_road_hover_preview(
             };
 
             let variants = industry_atlas.variants.max(1);
-            
+
             // Generate random variant once when tile or building type changes
             let variant_index = if needs_new_variant {
                 let mut rng = rand::thread_rng();

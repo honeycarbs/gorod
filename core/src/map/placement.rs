@@ -71,7 +71,15 @@ pub struct PlacementExecutionInputs<'w, 's> {
     atlases: PlacementAtlasResources<'w>,
     variants: PlacementVariantResources<'w>,
     commands: Commands<'w, 's>,
-    map_q: Query<'w, 's, (&'static TilemapSize, &'static TilemapGridSize, &'static Transform)>,
+    map_q: Query<
+        'w,
+        's,
+        (
+            &'static TilemapSize,
+            &'static TilemapGridSize,
+            &'static Transform,
+        ),
+    >,
 }
 
 #[derive(SystemParam)]
@@ -146,11 +154,13 @@ pub fn execute_placement_intents(mut inputs: PlacementExecutionInputs) {
                     (4, variant)
                 }
                 BuildingType::Road => {
-                    let variant = (inputs.variants.road.index as usize) % inputs.atlases.road.variants.max(1);
+                    let variant =
+                        (inputs.variants.road.index as usize) % inputs.atlases.road.variants.max(1);
                     (4, variant)
                 }
                 BuildingType::Decorative => {
-                    let variant = (inputs.variants.decorative.index as usize) % inputs.atlases.decorative.variants.max(1);
+                    let variant = (inputs.variants.decorative.index as usize)
+                        % inputs.atlases.decorative.variants.max(1);
                     (4, variant)
                 }
             };
@@ -167,7 +177,9 @@ pub fn execute_placement_intents(mut inputs: PlacementExecutionInputs) {
                 tile_pos: *tile_pos,
             });
 
-            if intent.building_type == BuildingType::Residential && inputs.atlases.residential.variants > 0 {
+            if intent.building_type == BuildingType::Residential
+                && inputs.atlases.residential.variants > 0
+            {
                 let world_pos = tile_center_to_world(tile_pos, map_size, grid_size, map_transform);
 
                 let sprite = Sprite::from_atlas_image(
@@ -205,7 +217,8 @@ pub fn execute_placement_intents(mut inputs: PlacementExecutionInputs) {
                         tile_pos: *tile_pos,
                     },
                 ));
-            } else if intent.building_type == BuildingType::Industry && inputs.atlases.industry.variants > 0
+            } else if intent.building_type == BuildingType::Industry
+                && inputs.atlases.industry.variants > 0
             {
                 let world_pos = tile_center_to_world(tile_pos, map_size, grid_size, map_transform);
 
@@ -224,9 +237,11 @@ pub fn execute_placement_intents(mut inputs: PlacementExecutionInputs) {
                         tile_pos: *tile_pos,
                     },
                 ));
-            } else if intent.building_type == BuildingType::Road && inputs.atlases.road.variants > 0 {
+            } else if intent.building_type == BuildingType::Road && inputs.atlases.road.variants > 0
+            {
                 let world_pos = tile_center_to_world(tile_pos, map_size, grid_size, map_transform);
-                let variant_index = (inputs.variants.road.index as usize) % inputs.atlases.road.variants.max(1);
+                let variant_index =
+                    (inputs.variants.road.index as usize) % inputs.atlases.road.variants.max(1);
 
                 let sprite = Sprite::from_atlas_image(
                     inputs.atlases.road.texture.clone(),
@@ -243,9 +258,12 @@ pub fn execute_placement_intents(mut inputs: PlacementExecutionInputs) {
                         tile_pos: *tile_pos,
                     },
                 ));
-            } else if intent.building_type == BuildingType::Decorative && inputs.atlases.decorative.variants > 0 {
+            } else if intent.building_type == BuildingType::Decorative
+                && inputs.atlases.decorative.variants > 0
+            {
                 let world_pos = tile_center_to_world(tile_pos, map_size, grid_size, map_transform);
-                let variant_index = (inputs.variants.decorative.index as usize) % inputs.atlases.decorative.variants.max(1);
+                let variant_index = (inputs.variants.decorative.index as usize)
+                    % inputs.atlases.decorative.variants.max(1);
 
                 let sprite = Sprite::from_atlas_image(
                     inputs.atlases.decorative.texture.clone(),
@@ -339,15 +357,18 @@ pub fn change_tile_type(mut inputs: TileTypeChangeInputs) {
         if delta != 0 {
             match active_type {
                 crate::budget::BuildingType::Residential => {
-                    let variants = inputs.atlases.residential
+                    let variants = inputs
+                        .atlases
+                        .residential
                         .as_ref()
                         .map(|a| a.variants as i32)
                         .unwrap_or(RESIDENTIAL_VARIANT_COUNT as i32);
                     if variants > 0 {
-                        let current_preview = inputs.preview_variant.residential.unwrap_or(0) as i32;
+                        let current_preview =
+                            inputs.preview_variant.residential.unwrap_or(0) as i32;
                         let new_index = current_preview + delta;
                         let final_variant = new_index.rem_euclid(variants) as usize;
-                        
+
                         inputs.preview_variant.residential = Some(final_variant);
                         info!("Selected residential variant: {}", final_variant);
                     }
@@ -366,7 +387,9 @@ pub fn change_tile_type(mut inputs: TileTypeChangeInputs) {
                 }
                 crate::budget::BuildingType::Road => {
                     let current = inputs.variants.road.index as i32;
-                    let variants = inputs.atlases.road
+                    let variants = inputs
+                        .atlases
+                        .road
                         .as_ref()
                         .map(|a| a.variants as i32)
                         .unwrap_or(ROAD_VARIANT_COUNT as i32);
@@ -391,7 +414,9 @@ pub fn change_tile_type(mut inputs: TileTypeChangeInputs) {
                 }
                 crate::budget::BuildingType::Decorative => {
                     let current = inputs.variants.decorative.index as i32;
-                    let variants = inputs.atlases.decorative
+                    let variants = inputs
+                        .atlases
+                        .decorative
                         .as_ref()
                         .map(|a| a.variants as i32)
                         .unwrap_or(DECORATIVE_VARIANT_COUNT as i32);
@@ -399,7 +424,10 @@ pub fn change_tile_type(mut inputs: TileTypeChangeInputs) {
                     if variants > 0 {
                         let new_index = current + delta;
                         inputs.variants.decorative.index = new_index.rem_euclid(variants) as u32;
-                        info!("Selected decorative variant: {}", inputs.variants.decorative.index);
+                        info!(
+                            "Selected decorative variant: {}",
+                            inputs.variants.decorative.index
+                        );
                     }
                 }
             }

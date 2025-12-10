@@ -130,4 +130,3 @@ pub fn sync_spatial_grid_on_demolition(
         spatial_grid.remove(&event.tile_pos, event.building_type);
     }
 }
-

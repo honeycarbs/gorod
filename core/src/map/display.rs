@@ -125,7 +125,13 @@ pub fn setup_tile_select_buttons(mut commands: Commands, asset_server: Res<Asset
     );
     spawn_button(container, BuildingType::Industry, "I", &font, &mut commands);
     spawn_button(container, BuildingType::Road, "O", &font, &mut commands);
-    spawn_button(container, BuildingType::Decorative, "B", &font, &mut commands);
+    spawn_button(
+        container,
+        BuildingType::Decorative,
+        "B",
+        &font,
+        &mut commands,
+    );
 }
 
 pub fn update_selected_tile_display(

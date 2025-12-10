@@ -6,7 +6,9 @@ use crate::budget::{BuildingDemolished, BuildingPlaced, BuildingType};
 use crate::map::{
     ABANDONED_TEXTURE_INDEX, CommercialBuilding, IndustryBuilding, ResidentialBuilding,
 };
-use crate::spatial::{SpatialGrid, sync_spatial_grid_on_demolition, sync_spatial_grid_on_placement};
+use crate::spatial::{
+    SpatialGrid, sync_spatial_grid_on_demolition, sync_spatial_grid_on_placement,
+};
 use crate::time::GameClock;
 
 use super::display::{setup_city_stats_display, update_city_stats_display};
@@ -191,7 +193,11 @@ pub fn update_population(
         services.job_capacity,
     );
 
-    let max_population = if housing_cap == 0 { 0 } else { target_population };
+    let max_population = if housing_cap == 0 {
+        0
+    } else {
+        target_population
+    };
 
     let diff = max_population - current_pop;
 
@@ -231,11 +237,7 @@ pub fn update_population(
     } else {
         info!(
             "Population changed from {} to {} (target {}, housing_capacity {}, job_capacity {})",
-            old_pop,
-            population.population,
-            max_population,
-            housing_cap,
-            services.job_capacity
+            old_pop, population.population, max_population, housing_cap, services.job_capacity
         );
     }
 }
@@ -249,8 +251,7 @@ pub fn update_demands(mut services: ResMut<CityServices>, population: Res<CityPo
         happy_growth_bonus = ((pop as f32 * 0.02) * happiness_factor).ceil() as i64;
     }
 
-    services.housing_demand =
-        (pop + happy_growth_bonus - services.housing_capacity).max(0);
+    services.housing_demand = (pop + happy_growth_bonus - services.housing_capacity).max(0);
     services.job_demand = (pop - services.job_capacity).max(0);
     services.entertainment_demand = (pop - services.entertainment_capacity).max(0);
 }
@@ -291,9 +292,7 @@ pub fn update_happiness_from_demands(
     };
 
     // Weight shortages; housing and jobs hurt more than entertainment.
-    let mut pressure = 0.8 * housing_pressure
-        + 0.6 * job_pressure
-        + 0.25 * entertainment_shortfall;
+    let mut pressure = 0.8 * housing_pressure + 0.6 * job_pressure + 0.25 * entertainment_shortfall;
     // Cap extreme pressure so it doesn't explode numerically
     if pressure > 1.5 {
         pressure = 1.5;
@@ -335,10 +334,7 @@ pub struct AbandonmentInputs<'w, 's> {
 }
 
 /// Periodically abandon buildings based on happiness and service pressures
-pub fn apply_abandonment(
-    mut inputs: AbandonmentInputs,
-    mut last_abandonment_day: Local<u32>,
-) {
+pub fn apply_abandonment(mut inputs: AbandonmentInputs, mut last_abandonment_day: Local<u32>) {
     const ABANDONMENT_INTERVAL_DAYS: u32 = 3;
     // If people are reasonably happy skip abandonment
     const MIN_HAPPINESS_FOR_ABANDON: f32 = 0.7;
