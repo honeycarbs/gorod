@@ -130,3 +130,80 @@ pub fn sync_spatial_grid_on_demolition(
         spatial_grid.remove(&event.tile_pos, event.building_type);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn tile(x: u32, y: u32) -> TilePos {
+        TilePos { x, y }
+    }
+
+    #[test]
+    fn cell_key_maps_positions_to_grid_cells() {
+        assert_eq!(cell_key(&tile(0, 0)), (0, 0));
+        assert_eq!(cell_key(&tile(7, 7)), (0, 0)); // Still in first cell
+        assert_eq!(cell_key(&tile(8, 8)), (1, 1)); // Next cell
+        assert_eq!(
+            cell_key(&tile(100, 200)),
+            (100 / CELL_SIZE, 200 / CELL_SIZE)
+        );
+    }
+
+    #[test]
+    fn typed_grid_insert_query_remove() {
+        let mut grid = TypedSpatialGrid::default();
+
+        grid.insert(tile(10, 10));
+        grid.insert(tile(11, 10));
+        grid.insert(tile(20, 20)); // Far away
+
+        // Query within radius 2 should find 2 positions
+        let results: Vec<_> = grid.query_chebyshev(&tile(10, 10), 2).collect();
+        assert_eq!(results.len(), 2);
+
+        // After removal, only 1 remains
+        grid.remove(&tile(10, 10));
+        let results: Vec<_> = grid.query_chebyshev(&tile(10, 10), 2).collect();
+        assert_eq!(results.len(), 1);
+    }
+
+    #[test]
+    fn spatial_grid_tracks_building_types_separately() {
+        let mut grid = SpatialGrid::default();
+
+        grid.insert(tile(5, 5), BuildingType::Residential);
+        grid.insert(tile(6, 6), BuildingType::Road);
+        grid.insert(tile(7, 7), BuildingType::Commercial);
+
+        assert_eq!(grid.count_residential_in_radius(&tile(10, 10), 10), 1);
+        assert!(grid.has_road_in_radius(&tile(10, 10), 10));
+        assert_eq!(grid.buildings_in_radius(&tile(6, 6), 5).len(), 3);
+    }
+
+    #[test]
+    fn queries_exclude_center_position() {
+        let mut grid = SpatialGrid::default();
+        let center = tile(10, 10);
+
+        grid.insert(center, BuildingType::Residential);
+        grid.insert(tile(11, 10), BuildingType::Residential);
+
+        // count_residential excludes center
+        assert_eq!(grid.count_residential_in_radius(&center, 5), 1);
+        // has_building excludes center
+        assert!(!grid.has_building_in_radius(&center, 0));
+    }
+
+    #[test]
+    fn remove_clears_from_all_relevant_grids() {
+        let mut grid = SpatialGrid::default();
+        let pos = tile(5, 5);
+
+        grid.insert(pos, BuildingType::Residential);
+        grid.remove(&pos, BuildingType::Residential);
+
+        assert_eq!(grid.count_residential_in_radius(&tile(6, 6), 5), 0);
+        assert!(!grid.has_building_in_radius(&tile(6, 6), 5));
+    }
+}
