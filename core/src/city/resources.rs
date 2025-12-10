@@ -43,6 +43,7 @@ pub struct CityInfrastructure {
     pub commercial_count: i64,
     pub industry_count: i64,
     pub road_count: i64,
+    pub decorative_count: i64,
 
     pub industry_job_capacity: i64,
     pub commercial_job_capacity: i64,
@@ -75,6 +76,11 @@ pub fn building_contribution(building_type: BuildingType) -> BuildingContributio
             housing: 0,
             jobs: 0,
             entertainment: 0,
+        },
+        BuildingType::Decorative => BuildingContribution {
+            housing: 0,
+            jobs: 0,
+            entertainment: 20,
         },
     }
 }

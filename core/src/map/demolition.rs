@@ -108,7 +108,35 @@ pub fn demolish_tile_on_click(
                         placeable_map.placeable_tiles.remove(&tile_pos);
                     }
 
-                    if let Some(building_type) = BuildingType::from_texture_index(current_texture) {
+                    // Detect building type from sprite component for accurate event
+                    let mut detected_type: Option<BuildingType> = None;
+                    for (entity, residential, commercial, industry, road) in
+                        building_sprites_q.iter()
+                    {
+                        if let Some(b) = residential
+                            && b.tile_pos == tile_pos
+                        {
+                            detected_type = Some(BuildingType::Residential);
+                            commands.entity(entity).despawn();
+                        } else if let Some(b) = commercial
+                            && b.tile_pos == tile_pos
+                        {
+                            detected_type = Some(BuildingType::Commercial);
+                            commands.entity(entity).despawn();
+                        } else if let Some(b) = industry
+                            && b.tile_pos == tile_pos
+                        {
+                            detected_type = Some(BuildingType::Industry);
+                            commands.entity(entity).despawn();
+                        } else if let Some(b) = road
+                            && b.tile_pos == tile_pos
+                        {
+                            detected_type = Some(BuildingType::Road);
+                            commands.entity(entity).despawn();
+                        }
+                    }
+
+                    if let Some(building_type) = detected_type {
                         demolished_writer.write(BuildingDemolished {
                             building_type,
                             tile_pos,
@@ -125,40 +153,6 @@ pub fn demolish_tile_on_click(
                         &inputs.tile_texture_q,
                         map_size,
                     );
-
-                    for (entity, residential, commercial, industry, road) in
-                        building_sprites_q.iter()
-                    {
-                        let mut should_despawn = false;
-
-                        if let Some(building) = residential
-                            && building.tile_pos == tile_pos
-                        {
-                            should_despawn = true;
-                        }
-
-                        if let Some(building) = commercial
-                            && building.tile_pos == tile_pos
-                        {
-                            should_despawn = true;
-                        }
-
-                        if let Some(building) = industry
-                            && building.tile_pos == tile_pos
-                        {
-                            should_despawn = true;
-                        }
-
-                        if let Some(road_segment) = road
-                            && road_segment.tile_pos == tile_pos
-                        {
-                            should_despawn = true;
-                        }
-
-                        if should_despawn {
-                            commands.entity(entity).despawn();
-                        }
-                    }
                 }
             }
         }

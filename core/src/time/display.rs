@@ -273,9 +273,9 @@ If you want to see this window again, press the \"?\" button.",
 pub fn update_time_display(
     clock: Res<GameClock>,
     time: Res<GameTime>,
-    mut query: Query<&mut Text, With<TimeDisplayText>>,
+    mut query: Query<(&mut Text, &mut TextColor), With<TimeDisplayText>>,
 ) {
-    let Ok(mut text) = query.single_mut() else {
+    let Ok((mut text, mut text_color)) = query.single_mut() else {
         return;
     };
 
@@ -290,6 +290,12 @@ pub fn update_time_display(
         "Day {}, {:02}:{:02}:{:02} [{}]",
         clock.day, clock.hour, clock.minute, clock.second, speed_str
     );
+
+    text_color.0 = if time.speed == TimeSpeed::Paused {
+        Color::srgb(1.0, 0.3, 0.3)
+    } else {
+        Color::WHITE
+    };
 }
 
 pub fn handle_help_ui(

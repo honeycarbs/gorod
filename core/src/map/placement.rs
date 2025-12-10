@@ -49,7 +49,7 @@ pub fn collect_placement_intents(
             map_type,
             anchor,
         ) && let Some(building_type) =
-            BuildingType::from_texture_index(current_tile_type.texture_index)
+            BuildingType::from_selection_index(current_tile_type.texture_index)
         {
             intent_writer.write(PlacementIntent {
                 tile_pos,
@@ -71,9 +71,7 @@ pub fn execute_placement_intents(
     commercial_atlas: Res<CommercialBuildingAtlas>,
     industry_atlas: Res<IndustryBuildingAtlas>,
     road_atlas: Res<RoadAtlas>,
-    current_residential_variant: Res<CurrentResidentialVariant>,
-    current_commercial_variant: Res<CurrentCommercialVariant>,
-    current_industry_variant: Res<CurrentIndustryVariant>,
+    preview_variant: Res<PreviewVariant>,
     current_road_variant: Res<CurrentRoadVariant>,
     mut commands: Commands,
     map_q: Query<(&TilemapSize, &TilemapGridSize, &Transform)>,
@@ -117,11 +115,25 @@ pub fn execute_placement_intents(
 
             current_budget.spend(cost);
 
-            let new_texture_index = match intent.building_type {
-                BuildingType::Residential => 2,
-                BuildingType::Commercial => 3,
-                BuildingType::Industry => 4,
-                BuildingType::Road => 5,
+            let (new_texture_index, variant_index) = match intent.building_type {
+                BuildingType::Residential => {
+                    let variant = preview_variant.residential.unwrap_or(0);
+                    // Houses 1-2 (indices 0,1) use tile 3; houses 3-5 (indices 2,3,4) use tile 2
+                    let tile_index = if variant <= 1 { 3 } else { 2 };
+                    (tile_index, variant)
+                }
+                BuildingType::Commercial => {
+                    let variant = preview_variant.commercial.unwrap_or(0);
+                    (4, variant)
+                }
+                BuildingType::Industry => {
+                    let variant = preview_variant.industry.unwrap_or(0);
+                    (4, variant)
+                }
+                BuildingType::Road => {
+                    let variant = (current_road_variant.index as usize) % road_atlas.variants.max(1);
+                    (4, variant)
+                }
             };
 
             texture_index.0 = new_texture_index;
@@ -138,21 +150,18 @@ pub fn execute_placement_intents(
 
             if intent.building_type == BuildingType::Residential && residential_atlas.variants > 0 {
                 let world_pos = tile_center_to_world(tile_pos, map_size, grid_size, map_transform);
-                let clamped_index = (current_residential_variant.index as usize)
-                    % residential_atlas.variants.max(1);
-                let y_offset = 6.0;
 
                 let sprite = Sprite::from_atlas_image(
                     residential_atlas.texture.clone(),
                     TextureAtlas {
                         layout: residential_atlas.layout.clone(),
-                        index: clamped_index,
+                        index: variant_index as usize,
                     },
                 );
 
                 commands.spawn((
                     sprite,
-                    Transform::from_xyz(world_pos.x, world_pos.y + y_offset, 10.0),
+                    Transform::from_xyz(world_pos.x, world_pos.y, 10.0),
                     ResidentialBuilding {
                         tile_pos: *tile_pos,
                     },
@@ -161,21 +170,18 @@ pub fn execute_placement_intents(
                 && commercial_atlas.variants > 0
             {
                 let world_pos = tile_center_to_world(tile_pos, map_size, grid_size, map_transform);
-                let clamped_index =
-                    (current_commercial_variant.index as usize) % commercial_atlas.variants.max(1);
-                let y_offset = 6.0;
 
                 let sprite = Sprite::from_atlas_image(
                     commercial_atlas.texture.clone(),
                     TextureAtlas {
                         layout: commercial_atlas.layout.clone(),
-                        index: clamped_index,
+                        index: variant_index,
                     },
                 );
 
                 commands.spawn((
                     sprite,
-                    Transform::from_xyz(world_pos.x, world_pos.y + y_offset, 10.0),
+                    Transform::from_xyz(world_pos.x, world_pos.y, 10.0),
                     CommercialBuilding {
                         tile_pos: *tile_pos,
                     },
@@ -183,35 +189,31 @@ pub fn execute_placement_intents(
             } else if intent.building_type == BuildingType::Industry && industry_atlas.variants > 0
             {
                 let world_pos = tile_center_to_world(tile_pos, map_size, grid_size, map_transform);
-                let clamped_index =
-                    (current_industry_variant.index as usize) % industry_atlas.variants.max(1);
-                let y_offset = 6.0;
 
                 let sprite = Sprite::from_atlas_image(
                     industry_atlas.texture.clone(),
                     TextureAtlas {
                         layout: industry_atlas.layout.clone(),
-                        index: clamped_index,
+                        index: variant_index,
                     },
                 );
 
                 commands.spawn((
                     sprite,
-                    Transform::from_xyz(world_pos.x, world_pos.y + y_offset, 10.0),
+                    Transform::from_xyz(world_pos.x, world_pos.y, 10.0),
                     IndustryBuilding {
                         tile_pos: *tile_pos,
                     },
                 ));
             } else if intent.building_type == BuildingType::Road && road_atlas.variants > 0 {
                 let world_pos = tile_center_to_world(tile_pos, map_size, grid_size, map_transform);
-                let clamped_index =
-                    (current_road_variant.index as usize) % road_atlas.variants.max(1);
+                let variant_index = (current_road_variant.index as usize) % road_atlas.variants.max(1);
 
                 let sprite = Sprite::from_atlas_image(
                     road_atlas.texture.clone(),
                     TextureAtlas {
                         layout: road_atlas.layout.clone(),
-                        index: clamped_index,
+                        index: variant_index,
                     },
                 );
 
@@ -232,10 +234,11 @@ pub fn execute_placement_intents(
 pub fn change_tile_type(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut current_tile_type: ResMut<CurrentTileType>,
-    mut current_residential_variant: ResMut<CurrentResidentialVariant>,
     mut current_commercial_variant: ResMut<CurrentCommercialVariant>,
     mut current_industry_variant: ResMut<CurrentIndustryVariant>,
     mut current_road_variant: ResMut<CurrentRoadVariant>,
+    mut preview_variant: ResMut<PreviewVariant>,
+    residential_atlas: Option<Res<ResidentialBuildingAtlas>>,
     road_atlas: Option<Res<RoadAtlas>>,
     help_state: Option<Res<HelpOverlayState>>,
 ) {
@@ -264,7 +267,7 @@ pub fn change_tile_type(
     // When a building type is selected, allow cycling through its variants
     // using ',' (next) and '.' (previous)
     if let Some(active_type) =
-        crate::budget::BuildingType::from_texture_index(current_tile_type.texture_index)
+        crate::budget::BuildingType::from_selection_index(current_tile_type.texture_index)
     {
         let mut delta: i32 = 0;
 
@@ -280,15 +283,17 @@ pub fn change_tile_type(
         if delta != 0 {
             match active_type {
                 crate::budget::BuildingType::Residential => {
-                    let current = current_residential_variant.index as i32;
-                    let variants = RESIDENTIAL_VARIANT_COUNT as i32;
+                    let variants = residential_atlas
+                        .as_ref()
+                        .map(|a| a.variants as i32)
+                        .unwrap_or(RESIDENTIAL_VARIANT_COUNT as i32);
                     if variants > 0 {
-                        let new_index = current + delta;
-                        current_residential_variant.index = new_index.rem_euclid(variants) as u32;
-                        info!(
-                            "Selected residential variant: {}",
-                            current_residential_variant.index
-                        );
+                        let current_preview = preview_variant.residential.unwrap_or(0) as i32;
+                        let new_index = current_preview + delta;
+                        let final_variant = new_index.rem_euclid(variants) as usize;
+                        
+                        preview_variant.residential = Some(final_variant);
+                        info!("Selected residential variant: {}", final_variant);
                     }
                 }
                 crate::budget::BuildingType::Commercial => {

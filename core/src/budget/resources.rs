@@ -32,6 +32,7 @@ pub enum BuildingType {
     Commercial,
     Industry,
     Road,
+    Decorative,
 }
 
 impl BuildingType {
@@ -42,15 +43,17 @@ impl BuildingType {
             BuildingType::Commercial => 1300,
             BuildingType::Industry => 2000,
             BuildingType::Road => 50,
+            BuildingType::Decorative => 500,
         }
     }
 
-    pub fn from_texture_index(index: u32) -> Option<Self> {
+    pub fn from_selection_index(index: u32) -> Option<Self> {
         match index {
             2 => Some(BuildingType::Residential),
             3 => Some(BuildingType::Commercial),
             4 => Some(BuildingType::Industry),
             5 => Some(BuildingType::Road),
+            6 => Some(BuildingType::Decorative),
             _ => None,
         }
     }

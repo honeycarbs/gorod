@@ -138,7 +138,7 @@ pub fn update_selected_tile_display(
         return;
     };
 
-    let label = match BuildingType::from_texture_index(current_tile_type.texture_index) {
+    let label = match BuildingType::from_selection_index(current_tile_type.texture_index) {
         Some(BuildingType::Residential) => "Residential (R)",
         Some(BuildingType::Commercial) => "Commercial (C)",
         Some(BuildingType::Industry) => "Industry (I)",
@@ -185,7 +185,7 @@ pub fn update_tile_select_button_colors(
         return;
     }
 
-    let active_type = BuildingType::from_texture_index(current_tile_type.texture_index);
+    let active_type = BuildingType::from_selection_index(current_tile_type.texture_index);
 
     for (button, mut bg) in query.iter_mut() {
         if Some(button.building_type) == active_type {

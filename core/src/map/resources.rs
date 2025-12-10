@@ -4,8 +4,8 @@ use bevy_ecs_tilemap::prelude::*;
 use bevy_image::TextureAtlasLayout;
 use std::collections::HashSet;
 
-/// Texture index for the abandoned (grey) tile in `tiles.png`
-pub const ABANDONED_TEXTURE_INDEX: u32 = 6;
+/// Texture index for abandoned/demolished tiles in `tiles.png`
+pub const ABANDONED_TEXTURE_INDEX: u32 = 4;
 
 #[derive(Resource, Default)]
 pub struct CursorWorldPos(pub Vec2);
@@ -51,6 +51,14 @@ pub struct CurrentCommercialVariant {
 #[derive(Resource, Default)]
 pub struct CurrentIndustryVariant {
     pub index: u32,
+}
+
+/// Stores the random variant shown in preview for each building type
+#[derive(Resource, Default)]
+pub struct PreviewVariant {
+    pub residential: Option<usize>,
+    pub commercial: Option<usize>,
+    pub industry: Option<usize>,
 }
 
 #[derive(Resource, Default)]
@@ -99,7 +107,7 @@ pub const INDUSTRY_VARIANT_COUNT: usize = 2;
 pub const ROAD_VARIANT_COUNT: usize = 11;
 
 /// Number of tile variants in the `tiles.png` sprite sheet used for previews
-pub const TILE_PREVIEW_VARIANT_COUNT: usize = 7;
+pub const TILE_PREVIEW_VARIANT_COUNT: usize = 5;
 
 #[derive(Resource)]
 pub struct ResidentialBuildingAtlas {
@@ -254,11 +262,11 @@ pub fn setup_tile_preview_atlas(
 ) {
     let texture: Handle<Image> = asset_server.load("sprites/tiles.png");
 
-    // `tiles.png` is arranged as a single row of 96x96 sprites
+    // `tiles.png` is arranged as a single column of 96x96 sprites (5 rows)
     let layout = layouts.add(TextureAtlasLayout::from_grid(
         UVec2::new(96, 96),
-        TILE_PREVIEW_VARIANT_COUNT as u32,
         1,
+        TILE_PREVIEW_VARIANT_COUNT as u32,
         None,
         None,
     ));

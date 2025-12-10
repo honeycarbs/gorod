@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_ecs_tilemap::prelude::{TilePos, TileStorage, TileTextureIndex, TilemapSize};
+use bevy_ecs_tilemap::prelude::{TileStorage, TileTextureIndex, TilemapSize};
 
 use crate::budget::{BuildingDemolished, BuildingPlaced, BuildingType};
 use crate::map::{
@@ -129,7 +129,39 @@ pub fn update_infrastructure_from_building_events(
     infra.commercial_job_capacity = infra.commercial_job_capacity.max(0);
 }
 
-/// Adjust population once per in‑game day based on available housing and jobs
+fn calculate_population_target(
+    housing_capacity: i64,
+    current_population: i64,
+    happiness: f32,
+    job_capacity: i64,
+) -> i64 {
+    let base_target = housing_capacity.max(0);
+
+    if happiness < 0.7 || current_population == 0 {
+        return base_target;
+    }
+
+    let job_availability = if current_population > 0 {
+        (job_capacity as f32 / current_population as f32).min(1.0)
+    } else {
+        1.0
+    };
+
+    if job_availability < 0.5 {
+        return base_target;
+    }
+
+    let happiness_factor = ((happiness - 0.7) / 0.3).clamp(0.0, 1.0);
+    let base_rate = 0.005;
+    let pop_factor = (current_population as f32 / 1000.0).min(1.0);
+    let growth_reduction = pop_factor * 0.3;
+    let effective_rate = base_rate * happiness_factor * (1.0 - growth_reduction) * job_availability;
+    let immigration_bonus = (current_population as f32 * effective_rate) as i64;
+
+    base_target + immigration_bonus
+}
+
+/// Adjust population once per in‑game day based on available housing, happiness, and jobs
 pub fn update_population(
     clock: Res<GameClock>,
     services: Res<CityServices>,
@@ -142,12 +174,18 @@ pub fn update_population(
     *last_processed_day = clock.day;
 
     let housing_cap = services.housing_capacity.max(0);
+    let current_pop = population.population.max(0);
 
-    // Population is primarily limited by housing
-    // If there are no jobs at all people gradually leave the city
-    let max_population = if housing_cap == 0 { 0 } else { housing_cap };
+    let target_population = calculate_population_target(
+        housing_cap,
+        current_pop,
+        population.happiness,
+        services.job_capacity,
+    );
 
-    let diff = max_population - population.population;
+    let max_population = if housing_cap == 0 { 0 } else { target_population };
+
+    let diff = max_population - current_pop;
 
     if diff == 0 {
         return;
@@ -157,33 +195,50 @@ pub fn update_population(
     if step == 0 {
         step = diff.signum();
     }
-    step = step.clamp(-5, 5);
 
-    let old_pop = population.population;
+    let max_daily_growth = if diff > 0 && population.happiness > 0.8 {
+        8
+    } else {
+        5
+    };
+
+    step = step.clamp(-max_daily_growth * 2, max_daily_growth);
+
+    let old_pop = current_pop;
     population.population += step;
     population.population = population.population.max(0);
-    info!(
-        "Population changed from {} to {} (target {}, housing_capacity {}, job_capacity {})",
-        old_pop,
-        population.population,
-        max_population,
-        services.housing_capacity,
-        services.job_capacity
-    );
+
+    let immigration_driven = target_population > housing_cap;
+    if immigration_driven {
+        info!(
+            "Population changed from {} to {} (target {} includes {} immigration bonus, housing_capacity {}, job_capacity {}, happiness {:.2})",
+            old_pop,
+            population.population,
+            target_population,
+            target_population - housing_cap,
+            housing_cap,
+            services.job_capacity,
+            population.happiness
+        );
+    } else {
+        info!(
+            "Population changed from {} to {} (target {}, housing_capacity {}, job_capacity {})",
+            old_pop,
+            population.population,
+            max_population,
+            housing_cap,
+            services.job_capacity
+        );
+    }
 }
 
 pub fn update_demands(mut services: ResMut<CityServices>, population: Res<CityPopulation>) {
     let pop = population.population.max(0);
 
-    // When people are very happy they start looking for more housing
-    // even if everyone is already housed. This creates a gentle, happiness‑driven
-    // growth pressure that encourages city expansion.
     let mut happy_growth_bonus: i64 = 0;
-    if pop > 0 && population.happiness >= 0.95 {
-        // Scale bonus with population and how close we are to 1.0 happiness.
-        // Roughly: at 1.0 happiness, about 5% of the population is added as extra demand
-        let happiness_factor = ((population.happiness - 0.95) / 0.05).clamp(0.0, 1.0);
-        happy_growth_bonus = ((pop as f32 * 0.05) * happiness_factor).ceil() as i64;
+    if pop > 0 && population.happiness >= 0.9 {
+        let happiness_factor = ((population.happiness - 0.9) / 0.1).clamp(0.0, 1.0);
+        happy_growth_bonus = ((pop as f32 * 0.02) * happiness_factor).ceil() as i64;
     }
 
     services.housing_demand =
@@ -276,7 +331,7 @@ pub fn apply_abandonment(
     }
     *last_abandonment_day = clock.day;
 
-    let (tile_storage, map_size) = if let Some(v) = tile_storage_q.iter().next() {
+    let (tile_storage, _) = if let Some(v) = tile_storage_q.iter().next() {
         v
     } else {
         return;
@@ -325,44 +380,24 @@ pub fn apply_abandonment(
     if residential_to_abandon > 0 {
         let mut remaining = residential_to_abandon;
 
-        'outer_res: for x in 0..map_size.x {
-            for y in 0..map_size.y {
-                if remaining == 0 {
-                    break 'outer_res;
-                }
+        for (entity, residential, _commercial, _industry) in building_sprites_q.iter() {
+            if remaining == 0 {
+                break;
+            }
 
-                let pos = TilePos { x, y };
-
-                if let Some(entity) = tile_storage.get(&pos)
-                    && let Ok(mut texture) = tile_texture_q.get_mut(entity)
+            if let Some(building) = residential {
+                let pos = building.tile_pos;
+                if let Some(tile_entity) = tile_storage.get(&pos)
+                    && let Ok(mut texture) = tile_texture_q.get_mut(tile_entity)
                 {
-                    if texture.0 == ABANDONED_TEXTURE_INDEX {
-                        continue;
-                    }
-
-                    if let Some(btype) = BuildingType::from_texture_index(texture.0)
-                        && matches!(btype, BuildingType::Residential)
-                    {
-                        texture.0 = ABANDONED_TEXTURE_INDEX;
-                        info!("Abandoned residential at {:?}", pos);
-                        demolished_writer.write(BuildingDemolished {
-                            building_type: btype,
-                            tile_pos: pos,
-                        });
-
-                        // Despawn any 3D/2D building sprites sitting on top of this tile
-                        for (entity, residential, _commercial, _industry) in
-                            building_sprites_q.iter()
-                        {
-                            if let Some(building) = residential
-                                && building.tile_pos == pos
-                            {
-                                commands.entity(entity).despawn();
-                            }
-                        }
-
-                        remaining -= 1;
-                    }
+                    texture.0 = ABANDONED_TEXTURE_INDEX;
+                    info!("Abandoned residential at {:?}", pos);
+                    demolished_writer.write(BuildingDemolished {
+                        building_type: BuildingType::Residential,
+                        tile_pos: pos,
+                    });
+                    commands.entity(entity).despawn();
+                    remaining -= 1;
                 }
             }
         }
@@ -372,62 +407,35 @@ pub fn apply_abandonment(
     if job_capacity_to_remove > 0 {
         let mut remaining_jobs = job_capacity_to_remove;
 
-        'outer_jobs: for x in 0..map_size.x {
-            for y in 0..map_size.y {
-                if remaining_jobs <= 0 {
-                    break 'outer_jobs;
-                }
+        for (entity, _residential, commercial, industry) in building_sprites_q.iter() {
+            if remaining_jobs <= 0 {
+                break;
+            }
 
-                let pos = TilePos { x, y };
+            let (pos, btype) = if let Some(b) = commercial {
+                (b.tile_pos, BuildingType::Commercial)
+            } else if let Some(b) = industry {
+                (b.tile_pos, BuildingType::Industry)
+            } else {
+                continue;
+            };
 
-                if let Some(entity) = tile_storage.get(&pos)
-                    && let Ok(mut texture) = tile_texture_q.get_mut(entity)
-                {
-                    if texture.0 == ABANDONED_TEXTURE_INDEX {
-                        continue;
-                    }
+            let contrib = building_contribution(btype);
+            if contrib.jobs <= 0 {
+                continue;
+            }
 
-                    if let Some(btype) = BuildingType::from_texture_index(texture.0)
-                        && matches!(btype, BuildingType::Commercial | BuildingType::Industry)
-                    {
-                        let contrib = building_contribution(btype);
-                        let jobs_here = contrib.jobs;
-
-                        if jobs_here <= 0 {
-                            continue;
-                        }
-
-                        texture.0 = ABANDONED_TEXTURE_INDEX;
-                        info!("Abandoned {:?} at {:?}", btype, pos);
-                        demolished_writer.write(BuildingDemolished {
-                            building_type: btype,
-                            tile_pos: pos,
-                        });
-
-                        // Despawn any commercial / industry sprites on this tile
-                        for (entity, _residential, commercial, industry) in
-                            building_sprites_q.iter()
-                        {
-                            let mut should_despawn = false;
-                            if let Some(building) = commercial
-                                && building.tile_pos == pos
-                            {
-                                should_despawn = true;
-                            }
-                            if let Some(building) = industry
-                                && building.tile_pos == pos
-                            {
-                                should_despawn = true;
-                            }
-
-                            if should_despawn {
-                                commands.entity(entity).despawn();
-                            }
-                        }
-
-                        remaining_jobs -= jobs_here;
-                    }
-                }
+            if let Some(tile_entity) = tile_storage.get(&pos)
+                && let Ok(mut texture) = tile_texture_q.get_mut(tile_entity)
+            {
+                texture.0 = ABANDONED_TEXTURE_INDEX;
+                info!("Abandoned {:?} at {:?}", btype, pos);
+                demolished_writer.write(BuildingDemolished {
+                    building_type: btype,
+                    tile_pos: pos,
+                });
+                commands.entity(entity).despawn();
+                remaining_jobs -= contrib.jobs;
             }
         }
     }

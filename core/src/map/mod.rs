@@ -21,6 +21,7 @@ impl Plugin for TilePlacementPlugin {
             .init_resource::<CurrentResidentialVariant>()
             .init_resource::<CurrentCommercialVariant>()
             .init_resource::<CurrentIndustryVariant>()
+            .init_resource::<PreviewVariant>()
             .init_resource::<PlaceableMap>()
             .init_resource::<UiClickBlocker>()
             .add_message::<events::PlacementIntent>()
