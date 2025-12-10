@@ -45,7 +45,7 @@ The game uses Bevy's plugin system to organize functionality. Each module define
 
 The simulation runs on a daily tick. At normal speed (1x), one in-game day takes approximately 8.6 real seconds. Systems communicate through Bevy events like `BuildingPlaced`, `BuildingDemolished`, and `TransactionFailed`.
 
-## What went wrong, eat went right and lessons learned
+## What went wrong, what went right and lessons learned
 
 ### The good
 
